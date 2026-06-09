@@ -23,7 +23,6 @@ const els = {
   btnSpacingDec: document.getElementById("btn-spacing-dec"),
   btnSpacingInc: document.getElementById("btn-spacing-inc"),
   btnSpacingApply: document.getElementById("btn-spacing-apply"),
-  editStatus: document.getElementById("edit-status"),
   modeBtns: document.querySelectorAll(".seg__btn"),
 };
 
@@ -100,13 +99,6 @@ async function loadProject(id) {
   renderThumbs();
   renderOverview();
   goTo(0, false);
-  updateDeployStatus();
-}
-
-function updateDeployStatus() {
-  if (state.deployUrl && !state.editDirty) {
-    els.editStatus.textContent = `公開済み: ${state.deployUrl}`;
-  }
 }
 
 function renderProjectList() {
@@ -278,24 +270,20 @@ async function deployToSurge() {
   els.btnDeploy.disabled = true;
   try {
     if (state.editDirty) {
-      els.editStatus.textContent = "保存してから公開します…";
       await waitForSaved();
     }
-    els.editStatus.textContent = "Surge に公開中…（数十秒かかることがあります）";
     const res = await fetch(`/api/projects/${encodeURIComponent(state.projectId)}/deploy`, {
       method: "POST",
     });
     const { data, ok } = await readJsonResponse(res);
     if (!ok) throw new Error(data.error || "公開に失敗しました");
     state.deployUrl = data.url;
-    els.editStatus.textContent = `公開完了: ${data.url}`;
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(data.url);
-      els.editStatus.textContent = `公開完了（URLコピー済）: ${data.url}`;
     }
     window.open(data.url, "_blank", "noopener,noreferrer");
   } catch (err) {
-    els.editStatus.textContent = err.message || "公開に失敗しました";
+    alert(err.message || "公開に失敗しました");
     console.error(err);
   } finally {
     els.btnDeploy.disabled = false;
@@ -350,10 +338,6 @@ els.btnDeploy.addEventListener("click", deployToSurge);
 window.addEventListener("message", (e) => {
   const msg = e.data;
   if (!msg || msg.source !== "slide-upa-edit") return;
-  if (msg.type === "selection") {
-    const n = msg.ids?.length ?? 0;
-    els.editStatus.textContent = n > 0 ? `${n} 件選択中` : "要素をクリックして選択";
-  }
   if (msg.type === "spacingInfo") {
     if ((msg.count ?? 0) >= 2 && typeof msg.avg === "number") {
       els.spacingInput.value = String(msg.avg);
@@ -364,15 +348,10 @@ window.addEventListener("message", (e) => {
   }
   if (msg.type === "dirty") {
     state.editDirty = true;
-    els.editStatus.textContent = "未保存の変更あり";
   }
   if (msg.type === "saved") {
     state.editDirty = false;
-    els.editStatus.textContent = state.deployUrl ? `保存済み（公開: ${state.deployUrl}）` : "保存済み";
     savedWaiter?.resolve();
-  }
-  if (msg.type === "spacing" && msg.uneven) {
-    els.editStatus.textContent = "余白がばらついています";
   }
 });
 

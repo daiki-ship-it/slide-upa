@@ -1,0 +1,8 @@
+{
+  "name": "slide-upa",
+  "private": true,
+  "scripts": {
+    "start": "npm start --prefix studio",
+    "studio": "npm start --prefix studio"
+  }
+}
