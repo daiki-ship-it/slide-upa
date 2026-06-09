@@ -9,6 +9,7 @@ const els = {
   thumbList: document.getElementById("thumb-list"),
   slideFrame: document.getElementById("slide-frame"),
   scriptText: document.getElementById("script-text"),
+  scriptDriftBanner: document.getElementById("script-drift-banner"),
   viewPresent: document.getElementById("view-present"),
   viewOverview: document.getElementById("view-overview"),
   overviewList: document.getElementById("overview-list"),
@@ -35,6 +36,9 @@ let state = {
   audienceWindow: null,
   editDirty: false,
   deployUrl: null,
+  overrides: { slides: {} },
+  /** @type {Array<Record<string, { html: string, imageSrc: string|null }>>} */
+  baseline: [],
 };
 
 /** @type {Promise<void>|null} */
@@ -80,6 +84,77 @@ async function fetchProjects() {
   return data.projects ?? [];
 }
 
+async function fetchOverrides(id) {
+  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/overrides`, { cache: "no-store" });
+  if (!res.ok) return { slides: {} };
+  return res.json();
+}
+
+async function loadSlideBaseline(audienceUrl) {
+  const res = await fetch(audienceUrl, { cache: "no-store" });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return [...doc.querySelectorAll(".slide")].map((slide) => {
+    const elements = {};
+    slide.querySelectorAll("[data-edit-id]").forEach((el) => {
+      const isVisual = el.hasAttribute("data-edit-visual");
+      elements[el.dataset.editId] = {
+        html: el.innerHTML,
+        imageSrc: isVisual ? el.querySelector(".slide__visual-img")?.getAttribute("src") ?? null : null,
+      };
+    });
+    return elements;
+  });
+}
+
+function htmlToComparableText(html) {
+  const doc = new DOMParser().parseFromString(`<div id="wrap">${html}</div>`, "text/html");
+  return (doc.getElementById("wrap")?.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeImageSrc(src) {
+  if (!src) return "";
+  try {
+    const url = new URL(src, window.location.origin);
+    return url.pathname.replace(/^\/output\/[^/]+\//, "");
+  } catch {
+    return String(src).trim();
+  }
+}
+
+function slideHasTextDrift(slideIndex) {
+  const slideOverrides = state.overrides?.slides?.[String(slideIndex)];
+  if (!slideOverrides?.elements) return false;
+
+  const baseline = state.baseline[slideIndex] ?? {};
+  for (const [id, override] of Object.entries(slideOverrides.elements)) {
+    const base = baseline[id];
+    if (override.imageSrc != null) {
+      const baseSrc = base?.imageSrc ?? null;
+      if (normalizeImageSrc(override.imageSrc) !== normalizeImageSrc(baseSrc)) {
+        return true;
+      }
+    }
+    if (override.html != null && base?.html != null) {
+      if (htmlToComparableText(override.html) !== htmlToComparableText(base.html)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function updateDriftUi() {
+  const hasDrift = slideHasTextDrift(state.index);
+  els.scriptDriftBanner?.classList.toggle("is-hidden", !hasDrift);
+
+  els.thumbList.querySelectorAll(".thumb").forEach((el, i) => {
+    const mark = el.querySelector(".thumb__drift");
+    if (mark) mark.hidden = !slideHasTextDrift(i);
+  });
+}
+
 async function loadProject(id) {
   const res = await fetch(`/api/projects/${encodeURIComponent(id)}`);
   if (!res.ok) throw new Error("Project not found");
@@ -90,6 +165,8 @@ async function loadProject(id) {
   state.deployUrl = data.deploy?.url ?? null;
   state.editDirty = false;
   state.index = 0;
+  state.overrides = await fetchOverrides(id);
+  state.baseline = await loadSlideBaseline(data.audienceUrl);
 
   els.projectTitle.textContent = data.deck.title ?? data.id;
   els.slideCount.textContent = `全 ${data.deck.slides.length} 枚`;
@@ -152,6 +229,7 @@ function renderThumbs() {
       <div class="thumb__row">
         <span class="thumb__num">${i + 1}</span>
         <span class="badge ${badgeClass(slide.type)}">${slide.typeLabel}</span>
+        <span class="thumb__drift" title="台本と表示がずれている可能性" hidden aria-hidden="true">⚠</span>
       </div>
       <p class="thumb__title">${escapeHtml(slide.heading)}</p>
     `;
@@ -167,6 +245,7 @@ function renderOverview() {
   slides.forEach((slide, i) => {
     const card = document.createElement("article");
     card.className = "overview-card";
+    const drift = slideHasTextDrift(i);
     card.innerHTML = `
       <div class="overview-card__preview">
         <iframe class="overview-card__frame" src="${audienceEmbedUrl(i)}" title="スライド ${i + 1}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -176,12 +255,18 @@ function renderOverview() {
           <span class="badge ${badgeClass(slide.type)}">${slide.typeLabel}</span>
           <span class="thumb__num">${i + 1} / ${slides.length}</span>
         </div>
+        ${
+          drift
+            ? `<p class="overview-card__drift"><i data-lucide="alert-triangle" aria-hidden="true"></i>手直し済み — 台本と表示がずれている可能性があります</p>`
+            : ""
+        }
         <h2 class="overview-card__heading">${escapeHtml(slide.heading)}</h2>
         <p class="overview-card__script">${escapeHtml(slide.script)}</p>
       </div>
     `;
     els.overviewList.appendChild(card);
   });
+  if (window.lucide) lucide.createIcons({ nodes: els.overviewList.querySelectorAll("[data-lucide]") });
 }
 
 function goTo(index, broadcast) {
@@ -197,6 +282,8 @@ function goTo(index, broadcast) {
   });
 
   els.scriptText.textContent = slide.script;
+
+  updateDriftUi();
 
   els.thumbList.querySelector(".thumb.is-active")?.scrollIntoView({
     block: "nearest",
@@ -400,6 +487,15 @@ window.addEventListener("message", (e) => {
   if (msg.type === "saved") {
     state.editDirty = false;
     savedWaiter?.resolve();
+    if (state.projectId) {
+      fetchOverrides(state.projectId)
+        .then((data) => {
+          state.overrides = data;
+          updateDriftUi();
+          renderOverview();
+        })
+        .catch(console.error);
+    }
   }
 });
 
