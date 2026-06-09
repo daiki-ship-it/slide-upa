@@ -140,6 +140,44 @@ function readBody(req) {
   });
 }
 
+function updateScriptMdSection(scriptContent, heading, newScript) {
+  const lines = scriptContent.split("\n");
+  const headingLine = `### ${heading}`;
+
+  let headingIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd() === headingLine) {
+      headingIdx = i;
+      break;
+    }
+  }
+  if (headingIdx === -1) return scriptContent; // 見出しが見つからなければ変更しない
+
+  let nextHeadingIdx = lines.length;
+  for (let i = headingIdx + 1; i < lines.length; i++) {
+    if (/^#{1,6} /.test(lines[i])) {
+      nextHeadingIdx = i;
+      break;
+    }
+  }
+
+  const sectionLines = lines.slice(headingIdx + 1, nextHeadingIdx);
+  const directiveLines = sectionLines.filter((l) => l.trimStart().startsWith("["));
+
+  const newParts = [];
+  const trimmedScript = newScript.trim();
+  if (trimmedScript) {
+    newParts.push("", ...trimmedScript.split("\n"));
+    if (directiveLines.length > 0) newParts.push("");
+    newParts.push(...directiveLines);
+  } else {
+    newParts.push(...directiveLines);
+  }
+  if (nextHeadingIdx < lines.length) newParts.push("");
+
+  return [...lines.slice(0, headingIdx + 1), ...newParts, ...lines.slice(nextHeadingIdx)].join("\n");
+}
+
 function serveFile(res, filePath) {
   if (!filePath.startsWith(ROOT) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     res.writeHead(404);
@@ -245,6 +283,46 @@ const server = http.createServer((req, res) => {
       .catch(() => {
         sendJson(res, 400, { error: "Invalid JSON" });
       });
+    return;
+  }
+
+  const scriptSlideMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/script-slide$/);
+  if (scriptSlideMatch && req.method === "PUT") {
+    const id = decodeURIComponent(scriptSlideMatch[1]);
+    readBody(req)
+      .then((body) => {
+        const dir = projectDir(id);
+        if (!dir) {
+          sendJson(res, 404, { error: "Project not found" });
+          return;
+        }
+        const deckPath = path.join(dir, "deck.json");
+        const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
+        const index = Number(body.index);
+        if (!Number.isFinite(index) || index < 0 || index >= deck.slides.length) {
+          sendJson(res, 400, { error: "Invalid slide index" });
+          return;
+        }
+        if (typeof body.script !== "string") {
+          sendJson(res, 400, { error: "script must be a string" });
+          return;
+        }
+        deck.slides[index].script = body.script;
+        fs.writeFileSync(deckPath, JSON.stringify(deck, null, 2), "utf8");
+
+        const scriptPath = path.join(dir, "script.md");
+        if (fs.existsSync(scriptPath)) {
+          const updated = updateScriptMdSection(
+            fs.readFileSync(scriptPath, "utf8"),
+            deck.slides[index].heading,
+            body.script
+          );
+          fs.writeFileSync(scriptPath, updated, "utf8");
+        }
+
+        sendJson(res, 200, { ok: true });
+      })
+      .catch(() => sendJson(res, 400, { error: "Invalid JSON" }));
     return;
   }
 

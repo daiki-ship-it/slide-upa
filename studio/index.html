@@ -117,17 +117,21 @@
       <aside class="pane pane--script" aria-label="台本">
         <div class="pane__head">
           <span class="pane__label">台本</span>
+          <button type="button" class="btn btn--sm btn--primary script-save-btn is-hidden" id="btn-save-script" title="台本を保存">
+            <i data-lucide="save" aria-hidden="true"></i>
+            保存
+          </button>
         </div>
         <div class="script-drift-banner is-hidden" id="script-drift-banner" role="status" aria-live="polite">
           <i data-lucide="alert-triangle" aria-hidden="true"></i>
           <p class="script-drift-banner__text">このスライドは手直し済みです。下の台本と画面の表示が一致していない可能性があります。</p>
         </div>
         <div class="script-panel">
-          <p class="script-panel__text" id="script-text"></p>
+          <textarea class="script-panel__text" id="script-text" placeholder="このスライドの台本はありません…" spellcheck="false"></textarea>
         </div>
         <div class="script-panel__hint">
           <i data-lucide="info" aria-hidden="true"></i>
-          スライドの文言・位置は中央プレビューで編集できます。構造の変更はカーソルで台本を直し、再生成してください。
+          台本はここで直接編集・保存できます。レイアウト変更は中央プレビューで。スライドの追加・削除はファイルを直し再生成してください。
         </div>
       </aside>
     </div>

@@ -20,6 +20,7 @@ const els = {
   btnDistribute: document.getElementById("btn-distribute"),
   btnSaveEdit: document.getElementById("btn-save-edit"),
   btnDeploy: document.getElementById("btn-deploy"),
+  btnSaveScript: document.getElementById("btn-save-script"),
   spacingInput: document.getElementById("spacing-input"),
   btnSpacingDec: document.getElementById("btn-spacing-dec"),
   btnSpacingInc: document.getElementById("btn-spacing-inc"),
@@ -35,6 +36,7 @@ let state = {
   index: 0,
   audienceWindow: null,
   editDirty: false,
+  scriptDirty: false,
   deployUrl: null,
   overrides: { slides: {} },
   /** @type {Array<Record<string, { html: string, imageSrc: string|null }>>} */
@@ -269,7 +271,26 @@ function renderOverview() {
   if (window.lucide) lucide.createIcons({ nodes: els.overviewList.querySelectorAll("[data-lucide]") });
 }
 
-function goTo(index, broadcast) {
+async function saveScriptSlide() {
+  if (!state.projectId) return;
+  const script = els.scriptText.value;
+  const index = state.index;
+  const res = await fetch(`/api/projects/${encodeURIComponent(state.projectId)}/script-slide`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index, script }),
+  });
+  if (!res.ok) throw new Error("台本の保存に失敗しました");
+  state.deck.slides[index].script = script;
+  state.scriptDirty = false;
+  els.btnSaveScript.classList.add("is-hidden");
+}
+
+async function goTo(index, broadcast) {
+  if (state.scriptDirty && state.projectId) {
+    await saveScriptSlide().catch(console.error);
+  }
+
   const slides = state.deck?.slides ?? [];
   if (index < 0 || index >= slides.length) return;
   state.index = index;
@@ -281,7 +302,9 @@ function goTo(index, broadcast) {
     if (!active) el.blur();
   });
 
-  els.scriptText.textContent = slide.script;
+  els.scriptText.value = slide.script ?? "";
+  state.scriptDirty = false;
+  els.btnSaveScript.classList.add("is-hidden");
 
   updateDriftUi();
 
@@ -469,6 +492,11 @@ els.spacingInput.addEventListener("keydown", (e) => {
 });
 els.btnSaveEdit.addEventListener("click", () => sendEditCmd("save"));
 els.btnDeploy.addEventListener("click", deployToSurge);
+els.btnSaveScript.addEventListener("click", () => saveScriptSlide().catch((err) => alert(err.message)));
+els.scriptText.addEventListener("input", () => {
+  state.scriptDirty = true;
+  els.btnSaveScript.classList.remove("is-hidden");
+});
 
 window.addEventListener("message", (e) => {
   const msg = e.data;
