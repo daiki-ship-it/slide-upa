@@ -18,6 +18,10 @@ const els = {
   btnCheckSpacing: document.getElementById("btn-check-spacing"),
   btnDistribute: document.getElementById("btn-distribute"),
   btnSaveEdit: document.getElementById("btn-save-edit"),
+  spacingInput: document.getElementById("spacing-input"),
+  btnSpacingDec: document.getElementById("btn-spacing-dec"),
+  btnSpacingInc: document.getElementById("btn-spacing-inc"),
+  btnSpacingApply: document.getElementById("btn-spacing-apply"),
   editStatus: document.getElementById("edit-status"),
   modeBtns: document.querySelectorAll(".seg__btn"),
 };
@@ -61,8 +65,8 @@ function audienceEmbedUrl(slideIndex) {
   return `${url.pathname}${url.search}`;
 }
 
-function sendEditCmd(cmd) {
-  els.slideFrame.contentWindow?.postMessage({ target: "slide-upa-edit", cmd }, "*");
+function sendEditCmd(cmd, extra = {}) {
+  els.slideFrame.contentWindow?.postMessage({ target: "slide-upa-edit", cmd, ...extra }, "*");
 }
 
 async function fetchProjects() {
@@ -222,11 +226,40 @@ function openMtg() {
   setTimeout(() => broadcastSlide(state.index), 500);
 }
 
+function setSpacingControlEnabled(enabled) {
+  els.spacingInput.disabled = !enabled;
+  els.btnSpacingDec.disabled = !enabled;
+  els.btnSpacingInc.disabled = !enabled;
+  els.btnSpacingApply.disabled = !enabled;
+}
+
+function applySpacingFromInput() {
+  const gap = Number.parseInt(els.spacingInput.value, 10);
+  if (Number.isNaN(gap) || gap < 0) return;
+  sendEditCmd("adjustSpacing", { gap });
+}
+
+function stepSpacingInput(delta) {
+  const current = Number.parseInt(els.spacingInput.value, 10);
+  const base = Number.isNaN(current) ? 40 : current;
+  const next = Math.min(240, Math.max(0, base + delta));
+  els.spacingInput.value = String(next);
+}
+
 els.btnMtg.addEventListener("click", openMtg);
 els.btnGroup.addEventListener("click", () => sendEditCmd("group"));
 els.btnUngroup.addEventListener("click", () => sendEditCmd("ungroup"));
 els.btnCheckSpacing.addEventListener("click", () => sendEditCmd("checkSpacing"));
 els.btnDistribute.addEventListener("click", () => sendEditCmd("distribute"));
+els.btnSpacingApply.addEventListener("click", applySpacingFromInput);
+els.btnSpacingDec.addEventListener("click", () => stepSpacingInput(-1));
+els.btnSpacingInc.addEventListener("click", () => stepSpacingInput(1));
+els.spacingInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    applySpacingFromInput();
+  }
+});
 els.btnSaveEdit.addEventListener("click", () => sendEditCmd("save"));
 
 window.addEventListener("message", (e) => {
@@ -235,6 +268,14 @@ window.addEventListener("message", (e) => {
   if (msg.type === "selection") {
     const n = msg.ids?.length ?? 0;
     els.editStatus.textContent = n > 0 ? `${n} 件選択中` : "要素をクリックして選択";
+  }
+  if (msg.type === "spacingInfo") {
+    if ((msg.count ?? 0) >= 2 && typeof msg.avg === "number") {
+      els.spacingInput.value = String(msg.avg);
+      setSpacingControlEnabled(true);
+    } else {
+      setSpacingControlEnabled(false);
+    }
   }
   if (msg.type === "dirty") {
     els.editStatus.textContent = "未保存の変更あり";

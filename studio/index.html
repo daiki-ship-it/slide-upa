@@ -75,6 +75,27 @@
             <i data-lucide="align-center" aria-hidden="true"></i>
             余白を均等化
           </button>
+          <div class="stage__spacing" id="spacing-control" aria-label="余白を調整">
+            <span class="stage__spacing-label">余白</span>
+            <button type="button" class="btn btn--sm btn--icon" id="btn-spacing-dec" aria-label="余白を狭く" disabled>−</button>
+            <input
+              type="number"
+              class="stage__spacing-input"
+              id="spacing-input"
+              min="0"
+              max="240"
+              step="1"
+              value="40"
+              inputmode="numeric"
+              aria-label="余白（px）"
+              disabled
+            >
+            <span class="stage__spacing-unit">px</span>
+            <button type="button" class="btn btn--sm btn--icon" id="btn-spacing-inc" aria-label="余白を広く" disabled>＋</button>
+            <button type="button" class="btn btn--sm" id="btn-spacing-apply" title="選択した要素の縦余白を指定値に揃える" disabled>
+              適用
+            </button>
+          </div>
           <button type="button" class="btn btn--sm btn--primary" id="btn-save-edit" title="スライドに保存（台本は変えません）">
             <i data-lucide="save" aria-hidden="true"></i>
             保存

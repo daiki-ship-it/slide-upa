@@ -57,6 +57,18 @@
 
   function postSelection() {
     postToParent({ type: "selection", ids: [...selected], slideIndex });
+    reportSpacingInfo();
+  }
+
+  function reportSpacingInfo() {
+    const els = getSelectedElements();
+    if (els.length < 2) {
+      postToParent({ type: "spacingInfo", count: els.length });
+      return;
+    }
+    const { gaps } = measureVerticalGaps(els);
+    const avg = Math.round(gaps.reduce((s, g) => s + g, 0) / gaps.length);
+    postToParent({ type: "spacingInfo", count: els.length, gaps, avg });
   }
 
   function readTranslate(el) {
@@ -126,6 +138,18 @@
 
   function getSortedByTop(els) {
     return [...els].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+  }
+
+  function getCanvasScale() {
+    const scaler = document.querySelector(".slide-scaler");
+    if (!scaler) return 1;
+    const transform = getComputedStyle(scaler).transform;
+    if (!transform || transform === "none") return 1;
+    return new DOMMatrix(transform).a || 1;
+  }
+
+  function screenToCanvas(delta) {
+    return delta / getCanvasScale();
   }
 
   function measureVerticalGaps(els) {
@@ -213,7 +237,7 @@
     sorted.forEach((el, i) => {
       const rect = el.getBoundingClientRect();
       const base = readTranslate(el);
-      const deltaY = targetTop - rect.top;
+      const deltaY = screenToCanvas(targetTop - rect.top);
       writeTranslate(el, base.x, base.y + deltaY);
       targetTop += heights[i] + gap;
     });
@@ -222,7 +246,39 @@
     const { gaps, uneven } = showGapGuides(sorted, measureVerticalGaps(sorted).gaps);
     showToast(uneven ? "余白を均等化しました" : "余白はすでに均等です");
     markDirty();
+    reportSpacingInfo();
     postToParent({ type: "spacing", gaps, uneven });
+  }
+
+  function adjustSpacing(targetGap) {
+    const els = getSelectedElements();
+    if (els.length < 2) {
+      showToast("2つ以上選んでから余白を調整してください");
+      return;
+    }
+    const gap = Math.max(0, Math.round(Number(targetGap)));
+    if (Number.isNaN(gap)) {
+      showToast("余白は数字で入力してください");
+      return;
+    }
+    const sorted = getSortedByTop(els);
+    const firstTop = sorted[0].getBoundingClientRect().top;
+    const heights = sorted.map((el) => el.getBoundingClientRect().height);
+    let targetTop = firstTop;
+
+    sorted.forEach((el, i) => {
+      const rect = el.getBoundingClientRect();
+      const base = readTranslate(el);
+      const deltaY = screenToCanvas(targetTop - rect.top);
+      writeTranslate(el, base.x, base.y + deltaY);
+      targetTop += heights[i] + gap;
+    });
+
+    const { gaps, uneven } = showGapGuides(sorted, measureVerticalGaps(sorted).gaps);
+    showToast(`縦の余白を ${gap}px に揃えました`);
+    markDirty();
+    reportSpacingInfo();
+    postToParent({ type: "spacing", gaps, uneven, targetGap: gap });
   }
 
   function checkSpacing() {
@@ -238,6 +294,7 @@
         : `余白は均等です（各 ${avg}px）`
     );
     postToParent({ type: "spacing", gaps, uneven });
+    reportSpacingInfo();
   }
 
   async function saveOverrides() {
@@ -417,6 +474,7 @@
     if (msg.cmd === "ungroup") ungroupSelected();
     if (msg.cmd === "distribute") distributeVertical();
     if (msg.cmd === "checkSpacing") checkSpacing();
+    if (msg.cmd === "adjustSpacing") adjustSpacing(msg.gap);
     if (msg.cmd === "save") saveOverrides();
     if (msg.cmd === "clearSelection") {
       clearSelection();

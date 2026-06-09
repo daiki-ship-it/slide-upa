@@ -444,6 +444,51 @@ body {
   color: hsl(192, 18%, 65%);
 }
 
+.stage__spacing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid hsl(200, 12%, 32%);
+  border-radius: 0.375rem;
+  background: hsl(200, 14%, 24%);
+}
+
+.stage__spacing-label,
+.stage__spacing-unit {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: hsl(192, 18%, 72%);
+}
+
+.stage__spacing-input {
+  width: 3rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid hsl(200, 12%, 34%);
+  border-radius: 0.25rem;
+  background: hsl(200, 14%, 18%);
+  color: hsl(192, 20%, 92%);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.stage__spacing-input:focus {
+  outline: 2px solid hsl(188, 65%, 42%);
+  outline-offset: 1px;
+}
+
+.stage__spacing-input:disabled {
+  opacity: 0.45;
+}
+
+.stage__edit-bar .btn--icon {
+  min-width: 1.65rem;
+  padding-inline: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
 .btn--sm {
   padding: 0.3rem 0.55rem;
   font-size: 0.75rem;
