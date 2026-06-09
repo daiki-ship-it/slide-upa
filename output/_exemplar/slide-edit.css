@@ -290,3 +290,40 @@
   font-size: 1.25rem;
   line-height: 1;
 }
+
+/* ④ 画像スライド「× 削除」ボタン */
+[data-edit-visual] {
+  position: relative;
+}
+
+.slide__visual-remove {
+  display: flex;
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 10;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: hsl(0, 65%, 52%);
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+[data-edit-visual]:hover .slide__visual-remove {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slide__visual-remove:hover {
+  background: hsl(0, 72%, 42%);
+}

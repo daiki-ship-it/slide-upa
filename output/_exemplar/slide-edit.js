@@ -3,7 +3,7 @@
  * - クリックで選択、ドラッグで移動、ダブルクリックでテキスト編集
  * - 位置は transform のみ（flex レイアウトを崩さない）
  * - data-edit-char 要素クリックでキャラクターピッカーを開く
- * - ④ 画像スライドで「枠を追加」ボタンを表示
+ * - ④ 画像スライドで「枠を追加」「×削除」ボタンを表示
  */
 (function () {
   const params = new URLSearchParams(window.location.search);
@@ -15,8 +15,10 @@
   let dragState = null;
   let pendingVisualSlot = null;
 
-  // bindEditables を複数回呼んでも二重バインドしないための管理セット
-  const bound = new WeakSet();
+  // ハンドラ種別ごとに WeakSet を分ける（同じ要素が複数のループで処理されても二重バインドしない）
+  const boundId = new WeakSet();     // [data-edit-id] 用（ドラッグ・テキスト編集）
+  const boundVisual = new WeakSet(); // [data-edit-visual] 用（画像アップロード）
+  const boundChar = new WeakSet();   // [data-edit-char] 用（キャラ選択）
 
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -117,7 +119,7 @@
       html: el.innerHTML,
       group: el.dataset.editGroup ?? null,
     };
-    if (el.dataset.editVisual === "1") {
+    if (el.hasAttribute("data-edit-visual")) {
       const img = el.querySelector(".slide__visual-img");
       if (img) state.imageSrc = img.getAttribute("src");
     }
@@ -328,6 +330,8 @@
     slot.innerHTML = `<img class="slide__visual-img" src="${src}" alt="">`;
     slot.dataset.edited = "1";
     slot.classList.add("has-visual-img");
+    // 削除ボタンを再追加（innerHTML で消えるため）
+    refreshVisualSlotUI();
     markDirty();
     showToast("画像をセットしました。「保存」で確定してください");
   }
@@ -374,6 +378,8 @@
   function onVisualSlotClick(e) {
     const slot = e.target.closest("[data-edit-visual]");
     if (!slot) return;
+    // 削除ボタンのクリックは除外
+    if (e.target.closest(".slide__visual-remove")) return;
     e.preventDefault();
     e.stopPropagation();
     pendingVisualSlot = slot;
@@ -395,22 +401,57 @@
     }
   }
 
-  // ── ④ 画像スライド：枠を追加 ────────────────────────────────
+  // ── ④ 画像スライド：枠の追加・削除 UI ──────────────────────────
 
-  function addVisualSlotButtons() {
+  function renumberVisualSlots(visualArea) {
+    [...visualArea.querySelectorAll(".slide__visual-slot")].forEach((slot, i) => {
+      const prefix = slot.dataset.editId?.replace(/\d+$/, "") ?? "";
+      if (prefix) slot.dataset.editId = `${prefix}${i}`;
+    });
+  }
+
+  /**
+   * 「＋ 枠を追加」ボタンと「× 削除」ボタンを全 visual スライドに整備する。
+   * 複数回呼ばれても安全（既存ボタンの重複なし、表示/非表示の更新のみ）。
+   */
+  function refreshVisualSlotUI() {
     document.querySelectorAll(".slide--visual").forEach((slide) => {
       const visualArea = slide.querySelector(".slide__visual-area");
-      if (!visualArea || visualArea.querySelector(".slide__visual-add")) return;
-      const btn = document.createElement("button");
-      btn.className = "slide__visual-add";
-      btn.type = "button";
-      btn.setAttribute("aria-label", "画像枠を追加");
-      btn.innerHTML = '<span aria-hidden="true">＋</span> 枠を追加';
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onAddVisualSlot(visualArea);
+      if (!visualArea) return;
+
+      // 「＋ 枠を追加」ボタン
+      if (!visualArea.querySelector(".slide__visual-add")) {
+        const btn = document.createElement("button");
+        btn.className = "slide__visual-add";
+        btn.type = "button";
+        btn.setAttribute("aria-label", "画像枠を追加");
+        btn.innerHTML = '<span aria-hidden="true">＋</span> 枠を追加';
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onAddVisualSlot(visualArea);
+        });
+        visualArea.appendChild(btn);
+      }
+
+      // 各スロットの「× 削除」ボタン
+      const slots = [...visualArea.querySelectorAll(".slide__visual-slot")];
+      slots.forEach((slot) => {
+        if (!slot.querySelector(".slide__visual-remove")) {
+          const btn = document.createElement("button");
+          btn.className = "slide__visual-remove";
+          btn.type = "button";
+          btn.setAttribute("aria-label", "この枠を削除");
+          btn.textContent = "×";
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            onRemoveVisualSlot(slot, visualArea);
+          });
+          slot.appendChild(btn);
+        }
+        // 1枠のときは削除ボタンを隠す（最後の1枠は消せない）
+        slot.querySelector(".slide__visual-remove").style.display =
+          slots.length > 1 ? "" : "none";
       });
-      visualArea.appendChild(btn);
     });
   }
 
@@ -426,8 +467,18 @@
     div.setAttribute("aria-label", "クリックして画像をアップロード");
     visualArea.insertBefore(div, visualArea.querySelector(".slide__visual-add"));
     bindEditables();
+    refreshVisualSlotUI();
     markDirty();
     showToast("画像枠を追加しました");
+  }
+
+  function onRemoveVisualSlot(slot, visualArea) {
+    slot.remove();
+    renumberVisualSlots(visualArea);
+    bindEditables();
+    refreshVisualSlotUI();
+    markDirty();
+    showToast("画像枠を削除しました");
   }
 
   // ── キャラクターピッカー ──────────────────────────────────────
@@ -606,7 +657,7 @@
 
   function onPointerDown(e) {
     const el = e.target.closest("[data-edit-id]");
-    if (!el || el.contentEditable === "true" || el.dataset.editVisual === "1" || el.hasAttribute("data-edit-char")) return;
+    if (!el || el.contentEditable === "true" || el.hasAttribute("data-edit-visual") || el.hasAttribute("data-edit-char")) return;
     if (dragState) endDrag();
     e.stopPropagation();
     e.preventDefault();
@@ -700,7 +751,7 @@
   function onDblClick(e) {
     const el = e.target.closest("[data-edit-id]");
     if (!el) return;
-    if (el.hasAttribute("data-edit-char")) return;
+    if (el.hasAttribute("data-edit-char") || el.hasAttribute("data-edit-visual")) return;
     e.preventDefault();
     e.stopPropagation();
     const textTarget = e.target.closest("[data-edit-text]") ?? el;
@@ -718,21 +769,24 @@
   }
 
   function bindEditables() {
+    // [data-edit-id]：ドラッグ・テキスト編集ハンドラ
     document.querySelectorAll("[data-edit-id]").forEach((el) => {
-      if (bound.has(el)) return;
-      bound.add(el);
+      if (boundId.has(el)) return;
+      boundId.add(el);
       el.addEventListener("pointerdown", onPointerDown);
       el.addEventListener("click", (ev) => ev.stopPropagation());
       el.addEventListener("dblclick", onDblClick);
     });
+    // [data-edit-visual]：画像アップロードハンドラ（別の WeakSet で管理）
     document.querySelectorAll("[data-edit-visual]").forEach((slot) => {
-      if (bound.has(slot)) return;
-      bound.add(slot);
+      if (boundVisual.has(slot)) return;
+      boundVisual.add(slot);
       slot.addEventListener("click", onVisualSlotClick);
     });
+    // [data-edit-char]：キャラクターピッカーハンドラ（別の WeakSet で管理）
     document.querySelectorAll("[data-edit-char]").forEach((el) => {
-      if (bound.has(el)) return;
-      bound.add(el);
+      if (boundChar.has(el)) return;
+      boundChar.add(el);
       el.addEventListener("click", onCharClick);
     });
   }
@@ -758,8 +812,8 @@
     removeSpacingGuides();
     clearSnapGuidesForActiveSlide();
     applyOverridesForSlide(slideIndex);
-    // 他スライドへ移動したとき、復元で追加されたスロットへハンドラをバインド
     bindEditables();
+    refreshVisualSlotUI();
   });
 
   window.addEventListener("keydown", (e) => {
@@ -783,14 +837,10 @@
       s.classList.contains("is-active")
     );
     if (slideIndex < 0) slideIndex = 0;
-    // グローバル設定（フッターアイコン）を全スライドに一括適用
     window.SlideUpaOverrides?.applyGlobal?.();
-    // オーバーライドを先に適用してからバインド（追加スロットも正しくバインドされる）
     applyOverridesForSlide(slideIndex);
     bindEditables();
-    // ④ 画像スライドに「枠を追加」ボタンを注入
-    addVisualSlotButtons();
-    // グローバルなリスナーは一度だけ登録
+    refreshVisualSlotUI();
     fileInput.addEventListener("change", onVisualFileSelected);
     document.addEventListener("focusout", onBlurEditable);
     postToParent({ type: "ready" });
