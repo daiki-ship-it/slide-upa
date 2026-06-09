@@ -49,12 +49,14 @@ function broadcastSlide(index) {
 function audienceEmbedUrl(slideIndex) {
   const url = new URL(state.audienceUrl, window.location.origin);
   url.searchParams.set("embed", "studio");
+  if (state.projectId) {
+    url.searchParams.set("project", state.projectId);
+  }
   if (typeof slideIndex === "number") {
     url.searchParams.set("slide", String(slideIndex));
     url.searchParams.set("preview", "1");
   } else if (state.projectId) {
     url.searchParams.set("edit", "1");
-    url.searchParams.set("project", state.projectId);
   }
   return `${url.pathname}${url.search}`;
 }
@@ -214,8 +216,9 @@ function escapeHtml(str) {
 
 function openMtg() {
   if (!state.audienceUrl) return;
-  const url = new URL(state.audienceUrl, window.location.origin).href;
-  state.audienceWindow = window.open(url, "slide-upa-audience");
+  const url = new URL(state.audienceUrl, window.location.origin);
+  if (state.projectId) url.searchParams.set("project", state.projectId);
+  state.audienceWindow = window.open(`${url.pathname}${url.search}`, "slide-upa-audience");
   setTimeout(() => broadcastSlide(state.index), 500);
 }
 

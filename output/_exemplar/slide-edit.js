@@ -8,7 +8,6 @@
   if (params.get("edit") !== "1" || params.get("embed") !== "studio") return;
 
   const projectId = params.get("project") ?? "";
-  let overrides = { slides: {} };
   let slideIndex = 0;
   const selected = new Set();
   let dragState = null;
@@ -96,39 +95,13 @@
     };
   }
 
-  function applyElementState(el, data) {
-    if (!data) return;
-    if (data.html != null) el.innerHTML = data.html;
-    if (data.translateX != null || data.translateY != null) {
-      writeTranslate(el, data.translateX ?? 0, data.translateY ?? 0);
-    } else if (data.left != null || data.top != null) {
-      writeTranslate(el, 0, 0);
-    }
-    if (data.group) {
-      el.dataset.editGroup = data.group;
-      el.classList.add("is-edit-grouped");
-    }
-  }
-
   function applyOverridesForSlide(index) {
-    const slide = document.querySelectorAll(".slide")[index];
-    if (!slide) return;
-    const data = overrides.slides[String(index)];
-    if (!data?.elements) return;
-    for (const [id, st] of Object.entries(data.elements)) {
-      const el = slide.querySelector(`[data-edit-id="${id}"]`);
-      if (el) applyElementState(el, st);
-    }
+    window.SlideUpaOverrides?.applyForSlide(index);
   }
 
   async function loadOverrides() {
-    if (!projectId) return;
-    try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/overrides`);
-      if (res.ok) overrides = await res.json();
-    } catch {
-      /* ignore */
-    }
+    if (!projectId || !window.SlideUpaOverrides) return;
+    await SlideUpaOverrides.load({ projectId });
   }
 
   function collectSlideState(index) {
@@ -269,12 +242,14 @@
 
   async function saveOverrides() {
     const key = String(slideIndex);
+    const overrides = SlideUpaOverrides.getData();
     overrides.slides[key] = collectSlideState(slideIndex);
+    SlideUpaOverrides.setData(overrides);
     if (!projectId) return false;
     const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/overrides`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(overrides),
+      body: JSON.stringify(SlideUpaOverrides.getData()),
     });
     if (res.ok) {
       showToast("保存しました（台本は変わりません）");

@@ -14,6 +14,8 @@
   --slide-border: hsl(192, 35%, 88%);
   --slide-bubble-bg: hsl(192, 45%, 97%);
   --slide-visual-placeholder-bg: hsl(192, 30%, 98%);
+  --slide-canvas-w: 1280;
+  --slide-canvas-h: 720;
 }
 
 *,
@@ -25,6 +27,7 @@
 html,
 body {
   margin: 0;
+  width: 100%;
   height: 100%;
   overflow: hidden;
   font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
@@ -36,16 +39,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100vw;
-  height: 100vh;
-  padding: 1rem;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.slide-scaler {
+  width: 1280px;
+  height: 720px;
+  flex-shrink: 0;
+  transform-origin: center center;
 }
 
 .slide-viewport {
   position: relative;
-  width: min(100vw - 2rem, calc((100vh - 2rem) * 16 / 9));
-  aspect-ratio: 16 / 9;
-  max-height: calc(100vh - 2rem);
+  width: 100%;
+  height: 100%;
+  container-type: inline-size;
+  container-name: slide;
 }
 
 .slide {
@@ -54,8 +66,8 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--surface-bg);
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 32px rgba(8, 40, 52, 0.28);
+  border-radius: 0.375rem;
+  box-shadow: none;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease;
@@ -131,7 +143,7 @@ body {
 
 .slide--title .slide__main-title {
   margin: 0;
-  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  font-size: clamp(1.75rem, 3.2cqw, 2.5rem);
   font-weight: 700;
   line-height: 1.35;
   color: var(--slide-title-heading);
@@ -143,7 +155,7 @@ body {
 
 .slide--title .slide__subtitle {
   margin: 0;
-  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-size: clamp(1rem, 1.6cqw, 1.25rem);
   font-weight: 500;
   color: var(--slide-title-sub);
   text-shadow:
@@ -162,7 +174,7 @@ body {
   margin: 0 0 1.25rem;
   padding-bottom: 0.65rem;
   border-bottom: 2px solid var(--slide-border);
-  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-size: clamp(1.35rem, 2.4cqw, 1.85rem);
   font-weight: 700;
   line-height: 1.4;
   text-align: left;
@@ -186,7 +198,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  font-size: clamp(1.05rem, 1.8cqw, 1.35rem);
   line-height: 1.55;
 }
 
@@ -220,7 +232,7 @@ body {
   flex: 1;
   min-width: 0;
   margin-left: 0.65rem;
-  padding: clamp(1.25rem, 2.4vw, 2rem) clamp(1.5rem, 3vw, 2.25rem);
+  padding: clamp(1.25rem, 2.4cqw, 2rem) clamp(1.5rem, 3cqw, 2.25rem);
   background: var(--slide-bubble-bg);
   border: 2px solid var(--slide-border);
   border-radius: 1.125rem;
@@ -254,7 +266,7 @@ body {
 
 .slide--quote .slide__bubble-lead {
   margin: 0 0 0.5rem;
-  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  font-size: clamp(1.05rem, 1.8cqw, 1.35rem);
   font-weight: 500;
   line-height: 1.5;
   color: var(--slide-muted);
@@ -262,7 +274,7 @@ body {
 
 .slide--quote .slide__bubble-key {
   margin: 0;
-  font-size: clamp(1.45rem, 2.8vw, 2.15rem);
+  font-size: clamp(1.45rem, 2.8cqw, 2.15rem);
   font-weight: 700;
   line-height: 1.55;
   color: var(--slide-accent);
@@ -311,37 +323,21 @@ body {
   background: #000;
 }
 
-.deck:fullscreen .slide-viewport {
-  width: 100vw;
-  height: 100vh;
-  max-height: none;
-  border-radius: 0;
-}
-
 .deck:fullscreen .slide {
   border-radius: 0;
 }
 
-/* studio iframe 埋め込み（余白なし・上揃え） */
+/* studio iframe 埋め込み */
 body[data-embed="studio"] {
   background: transparent;
 }
 
 body[data-embed="studio"] .deck {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
+  min-height: 0;
   padding: 0;
-}
-
-body[data-embed="studio"] .slide-viewport {
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  aspect-ratio: unset;
-}
-
-body[data-embed="studio"] .slide {
-  border-radius: 0.375rem;
-  box-shadow: none;
 }

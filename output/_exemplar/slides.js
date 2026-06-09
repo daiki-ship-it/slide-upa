@@ -6,6 +6,8 @@
  */
 (function () {
   const CHANNEL_NAME = "slide-upa-sync";
+  const SLIDE_CANVAS_W = 1280;
+  const SLIDE_CANVAS_H = 720;
   const params = new URLSearchParams(window.location.search);
   const isPreview = params.get("preview") === "1";
   const isEdit = params.get("edit") === "1";
@@ -16,6 +18,23 @@
   const slides = Array.from(document.querySelectorAll(".slide"));
   const deck = document.querySelector(".deck");
   let index = 0;
+
+  function fitSlideCanvas() {
+    const scaler = document.querySelector(".slide-scaler");
+    if (!deck || !scaler) return;
+    const scale = Math.min(deck.clientWidth / SLIDE_CANVAS_W, deck.clientHeight / SLIDE_CANVAS_H);
+    scaler.style.transform = `scale(${scale})`;
+  }
+
+  window.addEventListener("resize", fitSlideCanvas);
+  if (deck && window.ResizeObserver) {
+    new ResizeObserver(fitSlideCanvas).observe(deck);
+  }
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(fitSlideCanvas);
+  }
+  fitSlideCanvas();
+  requestAnimationFrame(fitSlideCanvas);
 
   function getInitialIndex() {
     const fromQuery = Number.parseInt(params.get("slide"), 10);
@@ -83,6 +102,8 @@
         }
       }
     });
+
+    document.addEventListener("fullscreenchange", fitSlideCanvas);
 
     if (!isEdit) {
       deck?.addEventListener("click", (e) => {
