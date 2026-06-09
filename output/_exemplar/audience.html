@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI自動報告の仕組み — slide-upa 完成見本</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="slides.css">
+</head>
+<body>
+  <div class="deck" role="application" aria-label="スライドプレゼンテーション">
+    <div class="slide-viewport">
+
+      <!-- ① 表紙 -->
+      <section class="slide slide--title" data-type="title" aria-hidden="true">
+        <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
+        <img
+          class="slide__watermark"
+          src="images/ウパ博士-真顔-512×512-透過.png"
+          alt=""
+          width="560"
+          height="560"
+          aria-hidden="true"
+        >
+        <div class="slide__body">
+          <h1 class="slide__main-title">AIが毎朝タスク進捗を<br>自動報告する仕組み</h1>
+        </div>
+        <div class="slide__bar slide__bar--bottom" aria-hidden="true"></div>
+        <footer class="slide__footer">
+          <img class="slide__icon" src="images/ウパ博士-標準-512×512-透過.png" alt="" width="32" height="32">
+          <span class="slide__page">1 / 4</span>
+        </footer>
+      </section>
+
+      <!-- ② 要点リスト -->
+      <section class="slide slide--bullets" data-type="bullets" aria-hidden="true">
+        <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
+        <div class="slide__body">
+          <h2 class="slide__section-title">1-1. 今日のゴール</h2>
+          <ul class="slide__list">
+            <li class="slide__list-item">
+              <i data-lucide="target" class="slide__list-icon" aria-hidden="true"></i>
+              <span>毎朝の進捗報告を<strong>自動化</strong>する全体像を掴む</span>
+            </li>
+            <li class="slide__list-item">
+              <i data-lucide="list-checks" class="slide__list-icon" aria-hidden="true"></i>
+              <span>自分の業務に置き換えるための<strong>4ステップ</strong>を理解する</span>
+            </li>
+            <li class="slide__list-item">
+              <i data-lucide="calendar-check" class="slide__list-icon" aria-hidden="true"></i>
+              <span>次回までに<strong>タスク一覧</strong>を1つ用意する</span>
+            </li>
+          </ul>
+        </div>
+        <div class="slide__bar slide__bar--bottom" aria-hidden="true"></div>
+        <footer class="slide__footer">
+          <img class="slide__icon" src="images/ウパ博士-標準-512×512-透過.png" alt="" width="32" height="32">
+          <span class="slide__page">2 / 4</span>
+        </footer>
+      </section>
+
+      <!-- ③ 大きな一言 -->
+      <section class="slide slide--quote" data-type="quote" aria-hidden="true">
+        <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
+        <div class="slide__body">
+          <h2 class="slide__section-title">1-2. 一番覚えておくこと</h2>
+          <div class="slide__content">
+            <img
+              class="slide__quote-char"
+              src="images/ウパ博士-諭す-512×512-透過.png"
+              alt=""
+              width="200"
+              height="200"
+            >
+            <div class="slide__bubble">
+              <p class="slide__bubble-lead">ポイントは</p>
+              <p class="slide__bubble-key">「人が毎回書かなくていい」ことです</p>
+            </div>
+          </div>
+        </div>
+        <div class="slide__bar slide__bar--bottom" aria-hidden="true"></div>
+        <footer class="slide__footer">
+          <img class="slide__icon" src="images/ウパ博士-標準-512×512-透過.png" alt="" width="32" height="32">
+          <span class="slide__page">3 / 4</span>
+        </footer>
+      </section>
+
+      <!-- ④ 画像メイン -->
+      <section class="slide slide--visual" data-type="visual" aria-hidden="true">
+        <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
+        <div class="slide__body">
+          <h2 class="slide__section-title">2-2. 全体の流れ</h2>
+          <div class="slide__visual-area">
+            <div class="slide__visual-slot">
+              <!-- 後から images/ に画像を置き、<img class="slide__visual-img" src="images/..." alt=""> を入れる -->
+            </div>
+          </div>
+        </div>
+        <div class="slide__bar slide__bar--bottom" aria-hidden="true"></div>
+        <footer class="slide__footer">
+          <img class="slide__icon" src="images/ウパ博士-標準-512×512-透過.png" alt="" width="32" height="32">
+          <span class="slide__page">4 / 4</span>
+        </footer>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    if (window.lucide) lucide.createIcons();
+  </script>
+  <script src="slides.js"></script>
+</body>
+</html>

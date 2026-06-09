@@ -1,0 +1,323 @@
+/* slide-upa スライド共通スタイル（完成見本 SSoT） */
+
+:root {
+  --brand-primary: hsl(188, 65%, 38%);
+  --brand-secondary: hsl(198, 58%, 34%);
+  --brand-gradient: linear-gradient(90deg, hsl(201, 72%, 34%), hsl(186, 68%, 42%));
+  --surface-bg: hsl(192, 45%, 99.4%);
+  --slide-title-bg: hsl(192, 48%, 93%);
+  --slide-title-heading: hsl(198, 58%, 28%);
+  --slide-title-sub: hsl(198, 42%, 36%);
+  --slide-text: hsl(210, 28%, 18%);
+  --slide-muted: hsl(200, 12%, 42%);
+  --slide-accent: hsl(188, 65%, 32%);
+  --slide-border: hsl(192, 35%, 88%);
+  --slide-bubble-bg: hsl(192, 45%, 97%);
+  --slide-visual-placeholder-bg: hsl(192, 30%, 98%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Noto Sans JP", "Inter", system-ui, sans-serif;
+  background: hsl(200, 18%, 12%);
+  color: var(--slide-text);
+}
+
+.deck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  padding: 1rem;
+}
+
+.slide-viewport {
+  position: relative;
+  width: min(100vw - 2rem, calc((100vh - 2rem) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - 2rem);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-bg);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 32px rgba(8, 40, 52, 0.28);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.slide__bar {
+  flex-shrink: 0;
+  height: 5px;
+  background: var(--brand-gradient);
+}
+
+.slide__bar--bottom {
+  margin-top: auto;
+}
+
+.slide__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 3rem 3.25rem;
+  min-height: 0;
+}
+
+.slide__footer {
+  display: none;
+}
+
+.slide__page {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--slide-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ① 表紙 */
+.slide--title {
+  background: var(--slide-title-bg);
+}
+
+.slide--title .slide__watermark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(78%, 560px);
+  height: auto;
+  object-fit: contain;
+  opacity: 0.07;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.slide--title .slide__body {
+  position: relative;
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.25rem;
+}
+
+.slide--title .slide__bar {
+  position: relative;
+  z-index: 1;
+}
+
+.slide--title .slide__main-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--slide-title-heading);
+  text-shadow:
+    0 0 28px rgba(255, 255, 255, 0.98),
+    0 0 10px rgba(255, 255, 255, 0.9),
+    0 2px 4px rgba(255, 255, 255, 0.75);
+}
+
+.slide--title .slide__subtitle {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-weight: 500;
+  color: var(--slide-title-sub);
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.95),
+    0 0 8px rgba(255, 255, 255, 0.85);
+}
+
+/* ②③④ 共通：左上見出し */
+.slide--bullets .slide__body,
+.slide--quote .slide__body,
+.slide--visual .slide__body {
+  align-items: stretch;
+}
+
+.slide__section-title {
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 2px solid var(--slide-border);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--slide-text);
+  flex-shrink: 0;
+}
+
+/* ② 要点リスト */
+.slide--bullets .slide__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.slide--bullets .slide__list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  line-height: 1.55;
+}
+
+.slide--bullets .slide__list-icon {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 0.15rem;
+  color: var(--brand-primary);
+}
+
+/* ③ 大きな一言（左キャラ + 吹き出し） */
+.slide--quote .slide__content {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.slide--quote .slide__quote-char {
+  width: min(26%, 200px);
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(8, 40, 52, 0.1));
+}
+
+.slide--quote .slide__bubble {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  margin-left: 0.65rem;
+  padding: clamp(1.25rem, 2.4vw, 2rem) clamp(1.5rem, 3vw, 2.25rem);
+  background: var(--slide-bubble-bg);
+  border: 2px solid var(--slide-border);
+  border-radius: 1.125rem;
+  box-shadow: 0 2px 16px rgba(8, 40, 52, 0.08);
+}
+
+.slide--quote .slide__bubble::before,
+.slide--quote .slide__bubble::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  pointer-events: none;
+}
+
+.slide--quote .slide__bubble::before {
+  left: -14px;
+  border-width: 10px 12px 10px 0;
+  border-color: transparent var(--slide-border) transparent transparent;
+}
+
+.slide--quote .slide__bubble::after {
+  left: -11px;
+  border-width: 8px 10px 8px 0;
+  border-color: transparent var(--slide-bubble-bg) transparent transparent;
+  z-index: 1;
+}
+
+.slide--quote .slide__bubble-lead {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--slide-muted);
+}
+
+.slide--quote .slide__bubble-key {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.8vw, 2.15rem);
+  font-weight: 700;
+  line-height: 1.55;
+  color: var(--slide-accent);
+}
+
+/* ④ 画像メイン（後から差し込む空白エリア） */
+.slide--visual .slide__visual-area {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.slide--visual .slide__visual-slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+}
+
+.slide--visual .slide__visual-slot:not(:has(.slide__visual-img)) {
+  border: 2px dashed var(--slide-border);
+  border-radius: 0.5rem;
+  background: var(--slide-visual-placeholder-bg);
+}
+
+.slide--visual .slide__visual-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+.slide--visual .slide__caption {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--slide-muted);
+  text-align: center;
+  line-height: 1.45;
+}
+
+/* 全画面 */
+.deck:fullscreen {
+  padding: 0;
+  background: #000;
+}
+
+.deck:fullscreen .slide-viewport {
+  width: 100vw;
+  height: 100vh;
+  max-height: none;
+  border-radius: 0;
+}
+
+.deck:fullscreen .slide {
+  border-radius: 0;
+}
