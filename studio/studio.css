@@ -512,6 +512,20 @@ body {
   color: white;
 }
 
+.stage__edit-bar .btn--deploy {
+  border-color: hsl(175, 55%, 38%);
+  background: hsl(175, 45%, 28%);
+  color: hsl(170, 30%, 94%);
+}
+
+.stage__edit-bar .btn--deploy:hover:not(:disabled) {
+  background: hsl(175, 50%, 32%);
+}
+
+.stage__edit-bar .btn--deploy:disabled {
+  opacity: 0.55;
+}
+
 .stage__frame-wrap {
   flex: 1;
   display: block;

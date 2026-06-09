@@ -2,10 +2,12 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { deployProject, readDeployRecord } from "./deploy.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const OUTPUT = path.join(ROOT, "output");
+const DEPLOY_LOG = path.join(ROOT, "deploy-history.log");
 const PORT = Number(process.env.PORT) || 3579;
 
 const MIME = {
@@ -68,7 +70,14 @@ function readProject(id) {
   const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
   const scriptPath = path.join(dir, "script.md");
   const script = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
-  return { id: path.basename(id), deck, script, audienceUrl: `/output/${path.basename(id)}/audience.html` };
+  const deploy = readDeployRecord(dir);
+  return {
+    id: path.basename(id),
+    deck,
+    script,
+    audienceUrl: `/output/${path.basename(id)}/audience.html`,
+    deploy,
+  };
 }
 
 function readOverrides(id) {
@@ -151,6 +160,24 @@ const server = http.createServer((req, res) => {
         });
       return;
     }
+  }
+
+  const deployMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/deploy$/);
+  if (deployMatch && req.method === "POST") {
+    const id = decodeURIComponent(deployMatch[1]);
+    const dir = projectDir(id);
+    if (!dir) {
+      sendJson(res, 404, { error: "Project not found" });
+      return;
+    }
+    deployProject(dir, path.basename(id), DEPLOY_LOG)
+      .then((record) => {
+        sendJson(res, 200, record);
+      })
+      .catch((err) => {
+        sendJson(res, 500, { error: err.message || "Deploy failed" });
+      });
+    return;
   }
 
   const projectMatch = url.pathname.match(/^\/api\/projects\/([^/]+)$/);

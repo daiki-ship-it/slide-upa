@@ -18,6 +18,7 @@ const els = {
   btnCheckSpacing: document.getElementById("btn-check-spacing"),
   btnDistribute: document.getElementById("btn-distribute"),
   btnSaveEdit: document.getElementById("btn-save-edit"),
+  btnDeploy: document.getElementById("btn-deploy"),
   spacingInput: document.getElementById("spacing-input"),
   btnSpacingDec: document.getElementById("btn-spacing-dec"),
   btnSpacingInc: document.getElementById("btn-spacing-inc"),
@@ -33,7 +34,12 @@ let state = {
   deck: null,
   index: 0,
   audienceWindow: null,
+  editDirty: false,
+  deployUrl: null,
 };
+
+/** @type {Promise<void>|null} */
+let savedWaiter = null;
 
 let syncChannel;
 try {
@@ -82,6 +88,8 @@ async function loadProject(id) {
   state.projectId = data.id;
   state.deck = data.deck;
   state.audienceUrl = data.audienceUrl;
+  state.deployUrl = data.deploy?.url ?? null;
+  state.editDirty = false;
   state.index = 0;
 
   els.projectTitle.textContent = data.deck.title ?? data.id;
@@ -92,6 +100,13 @@ async function loadProject(id) {
   renderThumbs();
   renderOverview();
   goTo(0, false);
+  updateDeployStatus();
+}
+
+function updateDeployStatus() {
+  if (state.deployUrl && !state.editDirty) {
+    els.editStatus.textContent = `公開済み: ${state.deployUrl}`;
+  }
 }
 
 function renderProjectList() {
@@ -218,6 +233,75 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+function waitForSaved(timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    if (!state.editDirty) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      savedWaiter = null;
+      reject(new Error("保存がタイムアウトしました。もう一度お試しください。"));
+    }, timeoutMs);
+    savedWaiter = {
+      resolve: () => {
+        clearTimeout(timer);
+        savedWaiter = null;
+        resolve();
+      },
+      reject: (err) => {
+        clearTimeout(timer);
+        savedWaiter = null;
+        reject(err);
+      },
+    };
+    sendEditCmd("save");
+  });
+}
+
+async function readJsonResponse(res) {
+  const text = await res.text();
+  try {
+    return { data: JSON.parse(text), ok: res.ok, status: res.status };
+  } catch {
+    if (res.status === 404) {
+      throw new Error(
+        "公開機能が見つかりません。studio を一度止めて npm start で再起動してください。"
+      );
+    }
+    throw new Error(text.trim() || "公開に失敗しました");
+  }
+}
+
+async function deployToSurge() {
+  if (!state.projectId) return;
+  els.btnDeploy.disabled = true;
+  try {
+    if (state.editDirty) {
+      els.editStatus.textContent = "保存してから公開します…";
+      await waitForSaved();
+    }
+    els.editStatus.textContent = "Surge に公開中…（数十秒かかることがあります）";
+    const res = await fetch(`/api/projects/${encodeURIComponent(state.projectId)}/deploy`, {
+      method: "POST",
+    });
+    const { data, ok } = await readJsonResponse(res);
+    if (!ok) throw new Error(data.error || "公開に失敗しました");
+    state.deployUrl = data.url;
+    els.editStatus.textContent = `公開完了: ${data.url}`;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(data.url);
+      els.editStatus.textContent = `公開完了（URLコピー済）: ${data.url}`;
+    }
+    window.open(data.url, "_blank", "noopener,noreferrer");
+  } catch (err) {
+    els.editStatus.textContent = err.message || "公開に失敗しました";
+    console.error(err);
+  } finally {
+    els.btnDeploy.disabled = false;
+  }
+}
+
 function openMtg() {
   if (!state.audienceUrl) return;
   const url = new URL(state.audienceUrl, window.location.origin);
@@ -261,6 +345,7 @@ els.spacingInput.addEventListener("keydown", (e) => {
   }
 });
 els.btnSaveEdit.addEventListener("click", () => sendEditCmd("save"));
+els.btnDeploy.addEventListener("click", deployToSurge);
 
 window.addEventListener("message", (e) => {
   const msg = e.data;
@@ -278,10 +363,13 @@ window.addEventListener("message", (e) => {
     }
   }
   if (msg.type === "dirty") {
+    state.editDirty = true;
     els.editStatus.textContent = "未保存の変更あり";
   }
   if (msg.type === "saved") {
-    els.editStatus.textContent = "保存済み";
+    state.editDirty = false;
+    els.editStatus.textContent = state.deployUrl ? `保存済み（公開: ${state.deployUrl}）` : "保存済み";
+    savedWaiter?.resolve();
   }
   if (msg.type === "spacing" && msg.uneven) {
     els.editStatus.textContent = "余白がばらついています";

@@ -261,7 +261,10 @@ studio で「MTG開始」→ audience.html を共有
   → studio だけ操作
 
 【公開（v1）】
-カーソル（スキル）から surge デプロイ → URL を返す
+studio で「Surge公開」→ Surge にデプロイ → URL を返す（クリップボードコピー＋新しいタブ）
+  ※ 未保存の変更がある場合は先に自動保存
+  ※ 初回のみターミナルで `npx surge login` が必要
+  ※ ポータルには URL を手動で載せる
 ```
 
 ---
@@ -272,15 +275,14 @@ studio で「MTG開始」→ audience.html を共有
 
 - スライド完成見本（4型 + ウパ博士世界観）
 - `audience.html`（共有用・同期受信）
-- studio（3ペイン + 全体確認 + MTG開始 + 手直し）
+- studio（3ペイン + 全体確認 + MTG開始 + 手直し + **Surge公開**）
 - 生成スキル（Cursor）
-- surge デプロイ（**スキルから**。アプリからはしない）
+- surge デプロイ（**studio からワンクリック**。スキルからも可）
 
 ### v2 以降
 
 - studio の Next.js 化
 - Google スライド級 UI（次枚プレビュー・タイマー等）
-- アプリからの surge デプロイ
 - `#slide-5` のような**特定枚リンク**
 - ポータル `learnCard` への `slideHref` 追加（ポータル改修）
 - 見出しレベル（`###` 固定か `##` も含むか）の**正式決定**
@@ -298,7 +300,7 @@ slide-upa v1 の Done:
 - [ ] スライド4型の見た目がウパ博士世界観で出ている
 - [ ] studio で全枚＋台本を確認できる
 - [ ] studio から MTG開始 → audience と同期して枚送りできる
-- [ ] surge にデプロイして URL が取れる
+- [ ] studio から Surge にデプロイして URL が取れる
 
 ---
 
@@ -322,3 +324,4 @@ slide-upa v1 の Done:
 | 2026-06-08 | 初版（グリル合意） |
 | 2026-06-08 | 改訂版1：一人語り台本に変更。キャラ画像を `assets/characters/` 単体完結に |
 | 2026-06-08 | **改訂版2**：studio（確認・プレゼンアプリ）を追加。`presenter.html` 廃止、`audience.html` に変更。studio＝プレゼンター画面、MTG開始で共有タブのみ開く構成。手直し・デプロイ・技術スタックの v1/v2 分担を明文化 |
+| 2026-06-08 | **改訂版3**：Surge デプロイを studio の「Surge公開」ボタンから実行する方針に変更（v1） |
