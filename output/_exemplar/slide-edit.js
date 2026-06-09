@@ -3,6 +3,7 @@
  * - クリックで選択、ドラッグで移動、ダブルクリックでテキスト編集
  * - 位置は transform のみ（flex レイアウトを崩さない）
  * - data-edit-char 要素クリックでキャラクターピッカーを開く
+ * - ④ 画像スライドで「枠を追加」ボタンを表示
  */
 (function () {
   const params = new URLSearchParams(window.location.search);
@@ -13,6 +14,9 @@
   const selected = new Set();
   let dragState = null;
   let pendingVisualSlot = null;
+
+  // bindEditables を複数回呼んでも二重バインドしないための管理セット
+  const bound = new WeakSet();
 
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -137,12 +141,18 @@
     if (!slide) return { elements: {} };
     const elements = {};
     slide.querySelectorAll("[data-edit-id]").forEach((el) => {
-      const hasVisualImage = el.dataset.editVisual === "1" && el.querySelector(".slide__visual-img");
+      const hasVisualImage = el.hasAttribute("data-edit-visual") && el.querySelector(".slide__visual-img");
       if (el.dataset.edited === "1" || hasVisualImage) {
         elements[el.dataset.editId] = getElementState(el);
       }
     });
-    return { elements };
+    const state = { elements };
+    // ④ 画像スライドのスロット数を保存（復元時に枠数を再現するため）
+    if (slide.classList.contains("slide--visual")) {
+      const count = slide.querySelectorAll(".slide__visual-slot").length;
+      if (count > 0) state.visualSlotCount = count;
+    }
+    return state;
   }
 
   function markDirty() {
@@ -385,10 +395,44 @@
     }
   }
 
+  // ── ④ 画像スライド：枠を追加 ────────────────────────────────
+
+  function addVisualSlotButtons() {
+    document.querySelectorAll(".slide--visual").forEach((slide) => {
+      const visualArea = slide.querySelector(".slide__visual-area");
+      if (!visualArea || visualArea.querySelector(".slide__visual-add")) return;
+      const btn = document.createElement("button");
+      btn.className = "slide__visual-add";
+      btn.type = "button";
+      btn.setAttribute("aria-label", "画像枠を追加");
+      btn.innerHTML = '<span aria-hidden="true">＋</span> 枠を追加';
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onAddVisualSlot(visualArea);
+      });
+      visualArea.appendChild(btn);
+    });
+  }
+
+  function onAddVisualSlot(visualArea) {
+    const slots = [...visualArea.querySelectorAll(".slide__visual-slot")];
+    if (!slots.length) return;
+    const prefix = slots[0].dataset.editId?.replace(/\d+$/, "") ?? "";
+    if (!prefix) return;
+    const div = document.createElement("div");
+    div.className = "slide__visual-slot";
+    div.dataset.editId = `${prefix}${slots.length}`;
+    div.setAttribute("data-edit-visual", "");
+    div.setAttribute("aria-label", "クリックして画像をアップロード");
+    visualArea.insertBefore(div, visualArea.querySelector(".slide__visual-add"));
+    bindEditables();
+    markDirty();
+    showToast("画像枠を追加しました");
+  }
+
   // ── キャラクターピッカー ──────────────────────────────────────
 
   function formatCharName(filename) {
-    // "ウパ博士-諭す-512×512-透過.png" → "ウパ博士\n諭す"
     const noExt = filename.replace(/\.png$/i, "").replace(/-512[×x]512-透過$/, "");
     const dashIdx = noExt.indexOf("-");
     if (dashIdx > 0) {
@@ -400,7 +444,6 @@
   function setCharImage(targetEl, filename) {
     const src = `images/${filename}`;
     if (targetEl.classList.contains("slide__icon")) {
-      // フッターアイコンは全スライドまとめて変更
       document.querySelectorAll(".slide__icon[data-edit-char]").forEach((icon) => {
         icon.setAttribute("src", src);
       });
@@ -428,11 +471,9 @@
       return;
     }
 
-    // 既存ピッカーを閉じる
     document.querySelector(".slide-char-picker")?.remove();
 
     const currentSrc = targetEl.getAttribute("src") ?? "";
-
     const overlay = document.createElement("div");
     overlay.className = "slide-char-picker";
 
@@ -465,9 +506,7 @@
     files.forEach((filename) => {
       const item = document.createElement("div");
       item.className = "slide-char-picker__item";
-      if (currentSrc.endsWith(filename)) {
-        item.classList.add("is-current");
-      }
+      if (currentSrc.endsWith(filename)) item.classList.add("is-current");
 
       const img = document.createElement("img");
       img.src = `/assets/characters/${filename}`;
@@ -483,7 +522,6 @@
         overlay.remove();
         setCharImage(targetEl, filename);
       });
-
       grid.appendChild(item);
     });
 
@@ -498,7 +536,6 @@
 
     document.body.appendChild(overlay);
 
-    // Esc で閉じる
     function onEsc(e) {
       if (e.key === "Escape") {
         overlay.remove();
@@ -506,7 +543,6 @@
       }
     }
     document.addEventListener("keydown", onEsc);
-    overlay.addEventListener("remove", () => document.removeEventListener("keydown", onEsc));
   }
 
   function onCharClick(e) {
@@ -518,10 +554,12 @@
   // ─────────────────────────────────────────────────────────────
 
   async function saveOverrides() {
-    const key = String(slideIndex);
-    const overrides = SlideUpaOverrides.getData();
-    overrides.slides[key] = collectSlideState(slideIndex);
-    SlideUpaOverrides.setData(overrides);
+    const ov = SlideUpaOverrides.getData();
+    // 全スライドを一括保存（枠数など他スライドの変更も確実に保存）
+    document.querySelectorAll(".slide").forEach((_, i) => {
+      ov.slides[String(i)] = collectSlideState(i);
+    });
+    SlideUpaOverrides.setData(ov);
     if (!projectId) return false;
     const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/overrides`, {
       method: "PUT",
@@ -568,7 +606,6 @@
 
   function onPointerDown(e) {
     const el = e.target.closest("[data-edit-id]");
-    // data-edit-char 要素はクリックでキャラピッカーを開くのでドラッグ対象外
     if (!el || el.contentEditable === "true" || el.dataset.editVisual === "1" || el.hasAttribute("data-edit-char")) return;
     if (dragState) endDrag();
     e.stopPropagation();
@@ -663,7 +700,6 @@
   function onDblClick(e) {
     const el = e.target.closest("[data-edit-id]");
     if (!el) return;
-    // data-edit-char 要素はダブルクリックでも編集不可
     if (el.hasAttribute("data-edit-char")) return;
     e.preventDefault();
     e.stopPropagation();
@@ -683,19 +719,22 @@
 
   function bindEditables() {
     document.querySelectorAll("[data-edit-id]").forEach((el) => {
+      if (bound.has(el)) return;
+      bound.add(el);
       el.addEventListener("pointerdown", onPointerDown);
       el.addEventListener("click", (ev) => ev.stopPropagation());
       el.addEventListener("dblclick", onDblClick);
     });
     document.querySelectorAll("[data-edit-visual]").forEach((slot) => {
+      if (bound.has(slot)) return;
+      bound.add(slot);
       slot.addEventListener("click", onVisualSlotClick);
     });
-    // キャラクター選び直し
     document.querySelectorAll("[data-edit-char]").forEach((el) => {
+      if (bound.has(el)) return;
+      bound.add(el);
       el.addEventListener("click", onCharClick);
     });
-    fileInput.addEventListener("change", onVisualFileSelected);
-    document.addEventListener("focusout", onBlurEditable);
   }
 
   window.addEventListener("message", (e) => {
@@ -719,6 +758,8 @@
     removeSpacingGuides();
     clearSnapGuidesForActiveSlide();
     applyOverridesForSlide(slideIndex);
+    // 他スライドへ移動したとき、復元で追加されたスロットへハンドラをバインド
+    bindEditables();
   });
 
   window.addEventListener("keydown", (e) => {
@@ -738,14 +779,20 @@
     document.querySelectorAll(".slide__body").forEach((body) => {
       body.classList.add("is-edit-layer");
     });
-    bindEditables();
     slideIndex = [...document.querySelectorAll(".slide")].findIndex((s) =>
       s.classList.contains("is-active")
     );
     if (slideIndex < 0) slideIndex = 0;
     // グローバル設定（フッターアイコン）を全スライドに一括適用
     window.SlideUpaOverrides?.applyGlobal?.();
+    // オーバーライドを先に適用してからバインド（追加スロットも正しくバインドされる）
     applyOverridesForSlide(slideIndex);
+    bindEditables();
+    // ④ 画像スライドに「枠を追加」ボタンを注入
+    addVisualSlotButtons();
+    // グローバルなリスナーは一度だけ登録
+    fileInput.addEventListener("change", onVisualFileSelected);
+    document.addEventListener("focusout", onBlurEditable);
     postToParent({ type: "ready" });
   });
 })();

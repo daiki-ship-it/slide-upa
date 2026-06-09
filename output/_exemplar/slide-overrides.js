@@ -35,6 +35,34 @@
     }
   }
 
+  /**
+   * ④ 画像スライドで保存されたスロット数に合わせて不足分の枠を追加する。
+   * slide-edit.js が bindEditables を呼ぶ前に実行されるため、
+   * 追加した枠のクリックハンドラは slide-edit.js 側で後から登録される。
+   */
+  function ensureVisualSlots(slide, neededCount) {
+    const visualArea = slide.querySelector(".slide__visual-area");
+    if (!visualArea) return;
+    const slots = visualArea.querySelectorAll(".slide__visual-slot");
+    if (slots.length >= neededCount) return;
+    const prefix = slots[0]?.dataset.editId?.replace(/\d+$/, "") ?? "";
+    if (!prefix) return;
+    for (let j = slots.length; j < neededCount; j++) {
+      const div = document.createElement("div");
+      div.className = "slide__visual-slot";
+      div.dataset.editId = `${prefix}${j}`;
+      div.setAttribute("data-edit-visual", "");
+      div.setAttribute("aria-label", "クリックして画像をアップロード");
+      // 「枠を追加」ボタンがあればその直前に、なければ末尾に挿入
+      const addBtn = visualArea.querySelector(".slide__visual-add");
+      if (addBtn) {
+        visualArea.insertBefore(div, addBtn);
+      } else {
+        visualArea.appendChild(div);
+      }
+    }
+  }
+
   function applyGlobal() {
     if (!overrides.global?.charIcon) return;
     const src = String(overrides.global.charIcon);
@@ -49,6 +77,18 @@
     if (!slide) return;
     const data = overrides.slides[String(index)];
     if (data?.elements) {
+      // ④ 画像スライド：追加された枠を復元
+      if (slide.classList.contains("slide--visual")) {
+        // overrides の elements に含まれる最大スロット番号からも必要数を推定
+        const slotIds = Object.keys(data.elements).filter((id) => /visual\d+$/.test(id));
+        const maxFromElements = slotIds.reduce((max, id) => {
+          const m = id.match(/visual(\d+)$/);
+          return m ? Math.max(max, Number(m[1]) + 1) : max;
+        }, 0);
+        const neededCount = Math.max(data.visualSlotCount ?? 0, maxFromElements);
+        if (neededCount > 1) ensureVisualSlots(slide, neededCount);
+      }
+
       for (const [id, st] of Object.entries(data.elements)) {
         const el = slide.querySelector(`[data-edit-id="${id}"]`);
         if (el) applyElementState(el, st);
