@@ -27,18 +27,43 @@
       el.classList.add("has-visual-img");
       el.dataset.edited = "1";
     }
+    if (data.charSrc != null && el.hasAttribute("data-edit-char")) {
+      const src = String(data.charSrc);
+      if (!/^images\/[^/]+$/.test(src)) return;
+      el.setAttribute("src", src);
+      el.dataset.edited = "1";
+    }
+  }
+
+  function applyGlobal() {
+    if (!overrides.global?.charIcon) return;
+    const src = String(overrides.global.charIcon);
+    if (!/^images\/[^/]+$/.test(src)) return;
+    document.querySelectorAll(".slide__icon[data-edit-char]").forEach((icon) => {
+      icon.setAttribute("src", src);
+    });
   }
 
   function applyForSlide(index) {
     const slide = document.querySelectorAll(".slide")[index];
     if (!slide) return;
     const data = overrides.slides[String(index)];
-    if (!data?.elements) return;
-    for (const [id, st] of Object.entries(data.elements)) {
-      const el = slide.querySelector(`[data-edit-id="${id}"]`);
-      if (el) applyElementState(el, st);
+    if (data?.elements) {
+      for (const [id, st] of Object.entries(data.elements)) {
+        const el = slide.querySelector(`[data-edit-id="${id}"]`);
+        if (el) applyElementState(el, st);
+      }
+      if (global.lucide) global.lucide.createIcons();
     }
-    if (global.lucide) global.lucide.createIcons();
+    // フッターアイコンはグローバル設定を適用
+    if (overrides.global?.charIcon) {
+      const src = String(overrides.global.charIcon);
+      if (/^images\/[^/]+$/.test(src)) {
+        slide.querySelectorAll(".slide__icon[data-edit-char]").forEach((icon) => {
+          icon.setAttribute("src", src);
+        });
+      }
+    }
   }
 
   async function load(options = {}) {
@@ -81,6 +106,8 @@
 
   async function initAudience(options = {}) {
     await load(options);
+    // グローバル設定を全スライドに一括適用
+    applyGlobal();
     const slides = document.querySelectorAll(".slide");
     const active = [...slides].findIndex((s) => s.classList.contains("is-active"));
     applyForSlide(active >= 0 ? active : 0);
@@ -90,6 +117,7 @@
   global.SlideUpaOverrides = {
     load,
     applyForSlide,
+    applyGlobal,
     applyElementState,
     getData,
     setData,

@@ -2,6 +2,7 @@
  * slide-upa スライド編集（studio 埋め込み専用）
  * - クリックで選択、ドラッグで移動、ダブルクリックでテキスト編集
  * - 位置は transform のみ（flex レイアウトを崩さない）
+ * - data-edit-char 要素クリックでキャラクターピッカーを開く
  */
 (function () {
   const params = new URLSearchParams(window.location.search);
@@ -115,6 +116,9 @@
     if (el.dataset.editVisual === "1") {
       const img = el.querySelector(".slide__visual-img");
       if (img) state.imageSrc = img.getAttribute("src");
+    }
+    if (el.hasAttribute("data-edit-char") && el.tagName === "IMG") {
+      state.charSrc = el.getAttribute("src");
     }
     return state;
   }
@@ -381,6 +385,138 @@
     }
   }
 
+  // ── キャラクターピッカー ──────────────────────────────────────
+
+  function formatCharName(filename) {
+    // "ウパ博士-諭す-512×512-透過.png" → "ウパ博士\n諭す"
+    const noExt = filename.replace(/\.png$/i, "").replace(/-512[×x]512-透過$/, "");
+    const dashIdx = noExt.indexOf("-");
+    if (dashIdx > 0) {
+      return noExt.slice(0, dashIdx) + "\n" + noExt.slice(dashIdx + 1);
+    }
+    return noExt;
+  }
+
+  function setCharImage(targetEl, filename) {
+    const src = `images/${filename}`;
+    if (targetEl.classList.contains("slide__icon")) {
+      // フッターアイコンは全スライドまとめて変更
+      document.querySelectorAll(".slide__icon[data-edit-char]").forEach((icon) => {
+        icon.setAttribute("src", src);
+      });
+      const ov = SlideUpaOverrides.getData();
+      ov.global = ov.global ?? {};
+      ov.global.charIcon = src;
+      SlideUpaOverrides.setData(ov);
+    } else {
+      targetEl.setAttribute("src", src);
+      targetEl.dataset.edited = "1";
+    }
+    markDirty();
+    showToast("キャラクターを変更しました。「保存」で確定してください");
+  }
+
+  async function openCharPicker(targetEl) {
+    let files;
+    try {
+      const res = await fetch("/api/characters");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      files = data.characters;
+    } catch {
+      showToast("キャラクター一覧の取得に失敗しました");
+      return;
+    }
+
+    // 既存ピッカーを閉じる
+    document.querySelector(".slide-char-picker")?.remove();
+
+    const currentSrc = targetEl.getAttribute("src") ?? "";
+
+    const overlay = document.createElement("div");
+    overlay.className = "slide-char-picker";
+
+    const panel = document.createElement("div");
+    panel.className = "slide-char-picker__panel";
+
+    const header = document.createElement("div");
+    header.className = "slide-char-picker__header";
+
+    const title = document.createElement("span");
+    title.className = "slide-char-picker__title";
+    title.textContent = "キャラクターを選択";
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "slide-char-picker__close";
+    closeBtn.setAttribute("aria-label", "閉じる");
+    closeBtn.textContent = "✕";
+    closeBtn.addEventListener("click", () => overlay.remove());
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    const note = document.createElement("p");
+    note.className = "slide-char-picker__note";
+    note.textContent = "※ 点線枠は画像アップロード用です（このピッカーとは別機能）";
+
+    const grid = document.createElement("div");
+    grid.className = "slide-char-picker__grid";
+
+    files.forEach((filename) => {
+      const item = document.createElement("div");
+      item.className = "slide-char-picker__item";
+      if (currentSrc.endsWith(filename)) {
+        item.classList.add("is-current");
+      }
+
+      const img = document.createElement("img");
+      img.src = `/assets/characters/${filename}`;
+      img.alt = filename;
+
+      const label = document.createElement("span");
+      label.className = "slide-char-picker__label";
+      label.textContent = formatCharName(filename);
+
+      item.appendChild(img);
+      item.appendChild(label);
+      item.addEventListener("click", () => {
+        overlay.remove();
+        setCharImage(targetEl, filename);
+      });
+
+      grid.appendChild(item);
+    });
+
+    panel.appendChild(header);
+    panel.appendChild(note);
+    panel.appendChild(grid);
+    overlay.appendChild(panel);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    document.body.appendChild(overlay);
+
+    // Esc で閉じる
+    function onEsc(e) {
+      if (e.key === "Escape") {
+        overlay.remove();
+        document.removeEventListener("keydown", onEsc);
+      }
+    }
+    document.addEventListener("keydown", onEsc);
+    overlay.addEventListener("remove", () => document.removeEventListener("keydown", onEsc));
+  }
+
+  function onCharClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    openCharPicker(e.currentTarget);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+
   async function saveOverrides() {
     const key = String(slideIndex);
     const overrides = SlideUpaOverrides.getData();
@@ -432,7 +568,8 @@
 
   function onPointerDown(e) {
     const el = e.target.closest("[data-edit-id]");
-    if (!el || el.contentEditable === "true" || el.dataset.editVisual === "1") return;
+    // data-edit-char 要素はクリックでキャラピッカーを開くのでドラッグ対象外
+    if (!el || el.contentEditable === "true" || el.dataset.editVisual === "1" || el.hasAttribute("data-edit-char")) return;
     if (dragState) endDrag();
     e.stopPropagation();
     e.preventDefault();
@@ -526,6 +663,8 @@
   function onDblClick(e) {
     const el = e.target.closest("[data-edit-id]");
     if (!el) return;
+    // data-edit-char 要素はダブルクリックでも編集不可
+    if (el.hasAttribute("data-edit-char")) return;
     e.preventDefault();
     e.stopPropagation();
     const textTarget = e.target.closest("[data-edit-text]") ?? el;
@@ -550,6 +689,10 @@
     });
     document.querySelectorAll("[data-edit-visual]").forEach((slot) => {
       slot.addEventListener("click", onVisualSlotClick);
+    });
+    // キャラクター選び直し
+    document.querySelectorAll("[data-edit-char]").forEach((el) => {
+      el.addEventListener("click", onCharClick);
     });
     fileInput.addEventListener("change", onVisualFileSelected);
     document.addEventListener("focusout", onBlurEditable);
@@ -600,6 +743,8 @@
       s.classList.contains("is-active")
     );
     if (slideIndex < 0) slideIndex = 0;
+    // グローバル設定（フッターアイコン）を全スライドに一括適用
+    window.SlideUpaOverrides?.applyGlobal?.();
     applyOverridesForSlide(slideIndex);
     postToParent({ type: "ready" });
   });

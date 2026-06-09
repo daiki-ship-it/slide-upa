@@ -1,1 +1,14 @@
-{ "slides": {} }
+{
+  "slides": {
+    "1": {
+      "elements": {
+        "s1-title": {
+          "translateX": 0,
+          "translateY": 0,
+          "html": "1-1. ゴール",
+          "group": null
+        }
+      }
+    }
+  }
+}

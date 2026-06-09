@@ -159,6 +159,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === "/api/characters" && req.method === "GET") {
+    const charsDir = path.join(ROOT, "assets", "characters");
+    let files = [];
+    if (fs.existsSync(charsDir)) {
+      files = fs.readdirSync(charsDir).filter((f) => IMAGE_EXT.has(path.extname(f).toLowerCase()));
+    }
+    sendJson(res, 200, { characters: files });
+    return;
+  }
+
   const overridesMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/overrides$/);
   if (overridesMatch) {
     const id = decodeURIComponent(overridesMatch[1]);
