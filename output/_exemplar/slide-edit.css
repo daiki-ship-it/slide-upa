@@ -119,3 +119,26 @@
 .slide-edit-toast.is-visible {
   opacity: 1;
 }
+
+[data-edit-visual] {
+  cursor: pointer;
+}
+
+[data-edit-visual]:not(.has-visual-img)::after {
+  content: "クリックして画像をアップロード";
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(200, 12%, 42%);
+  text-align: center;
+  padding: 0 1rem;
+}
+
+[data-edit-visual]:hover:not(.has-visual-img) {
+  outline: 2px dashed hsl(188, 65%, 42%);
+  outline-offset: -4px;
+}
+
+[data-edit-visual].has-visual-img:hover {
+  outline: 2px solid hsl(188, 65%, 42%);
+  outline-offset: 2px;
+}

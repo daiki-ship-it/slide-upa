@@ -100,6 +100,31 @@ function writeOverrides(id, data) {
   return true;
 }
 
+const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
+
+function sanitizeImageFilename(name) {
+  const ext = path.extname(name).toLowerCase();
+  if (!IMAGE_EXT.has(ext)) return null;
+  const base =
+    path
+      .basename(name, ext)
+      .replace(/[^a-zA-Z0-9_-]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "image";
+  return `${base}-${Date.now()}${ext}`;
+}
+
+function saveProjectImage(id, filename, buffer) {
+  const dir = projectDir(id);
+  if (!dir) return null;
+  const safeName = sanitizeImageFilename(filename);
+  if (!safeName) return null;
+  const imagesDir = path.join(dir, "images");
+  fs.mkdirSync(imagesDir, { recursive: true });
+  fs.writeFileSync(path.join(imagesDir, safeName), buffer);
+  return `images/${safeName}`;
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -176,6 +201,39 @@ const server = http.createServer((req, res) => {
       })
       .catch((err) => {
         sendJson(res, 500, { error: err.message || "Deploy failed" });
+      });
+    return;
+  }
+
+  const imageMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/images$/);
+  if (imageMatch && req.method === "POST") {
+    const id = decodeURIComponent(imageMatch[1]);
+    if (!projectDir(id)) {
+      sendJson(res, 404, { error: "Project not found" });
+      return;
+    }
+    readBody(req)
+      .then((body) => {
+        const filename = typeof body.filename === "string" ? body.filename : "image.png";
+        const data = typeof body.data === "string" ? body.data : "";
+        if (!data) {
+          sendJson(res, 400, { error: "画像データがありません" });
+          return;
+        }
+        const buffer = Buffer.from(data, "base64");
+        if (buffer.length > 10 * 1024 * 1024) {
+          sendJson(res, 400, { error: "画像が大きすぎます（10MB まで）" });
+          return;
+        }
+        const src = saveProjectImage(id, filename, buffer);
+        if (!src) {
+          sendJson(res, 400, { error: "PNG / JPEG / WebP / GIF のみアップロードできます" });
+          return;
+        }
+        sendJson(res, 200, { src });
+      })
+      .catch(() => {
+        sendJson(res, 400, { error: "Invalid JSON" });
       });
     return;
   }

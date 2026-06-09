@@ -11,6 +11,13 @@
   let slideIndex = 0;
   const selected = new Set();
   let dragState = null;
+  let pendingVisualSlot = null;
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/png,image/jpeg,image/webp,image/gif";
+  fileInput.hidden = true;
+  document.body.appendChild(fileInput);
 
   const toast = document.createElement("div");
   toast.className = "slide-edit-toast";
@@ -99,12 +106,17 @@
 
   function getElementState(el) {
     const { x, y } = readTranslate(el);
-    return {
+    const state = {
       translateX: x,
       translateY: y,
       html: el.innerHTML,
       group: el.dataset.editGroup ?? null,
     };
+    if (el.dataset.editVisual === "1") {
+      const img = el.querySelector(".slide__visual-img");
+      if (img) state.imageSrc = img.getAttribute("src");
+    }
+    return state;
   }
 
   function applyOverridesForSlide(index) {
@@ -121,7 +133,8 @@
     if (!slide) return { elements: {} };
     const elements = {};
     slide.querySelectorAll("[data-edit-id]").forEach((el) => {
-      if (el.dataset.edited === "1") {
+      const hasVisualImage = el.dataset.editVisual === "1" && el.querySelector(".slide__visual-img");
+      if (el.dataset.edited === "1" || hasVisualImage) {
         elements[el.dataset.editId] = getElementState(el);
       }
     });
@@ -297,6 +310,77 @@
     reportSpacingInfo();
   }
 
+  function setVisualSlotImage(slot, src) {
+    slot.innerHTML = `<img class="slide__visual-img" src="${src}" alt="">`;
+    slot.dataset.edited = "1";
+    slot.classList.add("has-visual-img");
+    markDirty();
+    showToast("画像をセットしました。「保存」で確定してください");
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") {
+          reject(new Error("画像の読み込みに失敗しました"));
+          return;
+        }
+        const base64 = result.split(",")[1];
+        if (!base64) {
+          reject(new Error("画像の読み込みに失敗しました"));
+          return;
+        }
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadVisualImage(file) {
+    if (!projectId) {
+      showToast("プロジェクトが読み込まれていません");
+      return null;
+    }
+    const data = await readFileAsBase64(file);
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: file.name, data }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(payload.error || "画像のアップロードに失敗しました");
+    }
+    return payload.src;
+  }
+
+  function onVisualSlotClick(e) {
+    const slot = e.target.closest("[data-edit-visual]");
+    if (!slot) return;
+    e.preventDefault();
+    e.stopPropagation();
+    pendingVisualSlot = slot;
+    fileInput.value = "";
+    fileInput.click();
+  }
+
+  async function onVisualFileSelected() {
+    const file = fileInput.files?.[0];
+    const slot = pendingVisualSlot;
+    pendingVisualSlot = null;
+    if (!file || !slot) return;
+    try {
+      showToast("画像をアップロード中…");
+      const src = await uploadVisualImage(file);
+      if (src) setVisualSlotImage(slot, src);
+    } catch (err) {
+      showToast(err.message || "画像のアップロードに失敗しました");
+    }
+  }
+
   async function saveOverrides() {
     const key = String(slideIndex);
     const overrides = SlideUpaOverrides.getData();
@@ -348,7 +432,7 @@
 
   function onPointerDown(e) {
     const el = e.target.closest("[data-edit-id]");
-    if (!el || el.contentEditable === "true") return;
+    if (!el || el.contentEditable === "true" || el.dataset.editVisual === "1") return;
     if (dragState) endDrag();
     e.stopPropagation();
     e.preventDefault();
@@ -464,6 +548,10 @@
       el.addEventListener("click", (ev) => ev.stopPropagation());
       el.addEventListener("dblclick", onDblClick);
     });
+    document.querySelectorAll("[data-edit-visual]").forEach((slot) => {
+      slot.addEventListener("click", onVisualSlotClick);
+    });
+    fileInput.addEventListener("change", onVisualFileSelected);
     document.addEventListener("focusout", onBlurEditable);
   }
 

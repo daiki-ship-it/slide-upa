@@ -20,6 +20,13 @@
       el.dataset.editGroup = data.group;
       el.classList.add("is-edit-grouped");
     }
+    if (data.imageSrc != null && el.dataset.editVisual === "1") {
+      const src = String(data.imageSrc);
+      if (!/^images\/[^/]+$/.test(src)) return;
+      el.innerHTML = `<img class="slide__visual-img" src="${src}" alt="">`;
+      el.classList.add("has-visual-img");
+      el.dataset.edited = "1";
+    }
   }
 
   function applyForSlide(index) {
