@@ -265,8 +265,53 @@ async function readJsonResponse(res) {
   }
 }
 
+const DEPLOY_PREVIEW_TARGET = "slide-upa-surge-preview";
+
+function openDeployPreviewTab() {
+  const tab = window.open("about:blank", DEPLOY_PREVIEW_TARGET);
+  if (!tab) return null;
+  tab.document.title = "Surge 公開中…";
+  tab.document.body.innerHTML =
+    '<p style="font-family:sans-serif;padding:2rem;color:#334155">Surge に公開しています…<br><small>数十秒かかることがあります</small></p>';
+  return tab;
+}
+
+function navigateDeployPreviewTab(tab, url) {
+  if (tab && !tab.closed) {
+    tab.location.replace(url);
+    tab.opener = null;
+    return true;
+  }
+  const reopened = window.open(url, DEPLOY_PREVIEW_TARGET);
+  if (reopened) {
+    reopened.opener = null;
+    return true;
+  }
+  return false;
+}
+
+async function copyDeployUrl(url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch {
+    // 新しいタブにフォーカスが移ると Chrome ではコピーできないことがある
+    return false;
+  }
+}
+
 async function deployToSurge() {
   if (!state.projectId) return;
+
+  // Chrome: noopener だと tab が null になり about:blank のまま動かせない
+  const previewTab = openDeployPreviewTab();
+  if (!previewTab) {
+    alert(
+      "ポップアップがブロックされています。Chrome のアドレスバー右で「ポップアップを常に許可」にしてから、もう一度 Surge公開 を押してください。"
+    );
+    return;
+  }
+
   els.btnDeploy.disabled = true;
   try {
     if (state.editDirty) {
@@ -278,11 +323,14 @@ async function deployToSurge() {
     const { data, ok } = await readJsonResponse(res);
     if (!ok) throw new Error(data.error || "公開に失敗しました");
     state.deployUrl = data.url;
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(data.url);
+
+    if (!navigateDeployPreviewTab(previewTab, data.url)) {
+      alert(`公開は完了しました。ブラウザで開いてください:\n${data.url}`);
     }
-    window.open(data.url, "_blank", "noopener,noreferrer");
+
+    await copyDeployUrl(data.url);
   } catch (err) {
+    if (previewTab && !previewTab.closed) previewTab.close();
     alert(err.message || "公開に失敗しました");
     console.error(err);
   } finally {
