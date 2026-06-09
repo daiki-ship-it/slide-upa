@@ -1,0 +1,121 @@
+/* studio 編集モード（embed=studio & edit=1 のときのみ有効） */
+
+.slide__body.is-edit-layer {
+  position: relative;
+}
+
+[data-edit-id] {
+  cursor: pointer;
+  transition: box-shadow 0.12s ease;
+  position: relative;
+}
+
+[data-edit-id] .slide__list-icon,
+[data-edit-id] [data-lucide] {
+  pointer-events: none;
+}
+
+[data-edit-id].is-edit-selected {
+  outline: 2px solid hsl(188, 65%, 42%);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsla(188, 65%, 42%, 0.2);
+}
+
+[data-edit-id].is-edit-selected.is-edit-grouped {
+  outline-color: hsl(38, 92%, 50%);
+  box-shadow: 0 0 0 4px hsla(38, 92%, 50%, 0.2);
+}
+
+[data-edit-id][contenteditable="true"] {
+  cursor: text;
+  outline: 2px solid hsl(201, 72%, 40%);
+  outline-offset: 2px;
+}
+
+.slide-edit-group {
+  position: absolute;
+  border: 1px dashed hsl(38, 92%, 50%);
+  pointer-events: none;
+}
+
+.slide-edit-group.is-edit-selected {
+  border-width: 2px;
+  border-style: solid;
+}
+
+.slide-edit-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.slide-edit-guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed hsl(188, 65%, 50%);
+}
+
+.slide-edit-guide__label {
+  position: absolute;
+  right: 0.5rem;
+  top: -0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: hsl(188, 65%, 38%);
+  color: white;
+}
+
+.slide-edit-guide.is-uneven .slide-edit-guide__label {
+  background: hsl(0, 65%, 48%);
+}
+
+.slide-edit-snap-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 150;
+}
+
+.slide-edit-snap-guide {
+  position: absolute;
+  pointer-events: none;
+}
+
+.slide-edit-snap-guide--x {
+  width: 0;
+  border-left: 1px dashed hsl(0, 78%, 52%);
+}
+
+.slide-edit-snap-guide--y {
+  height: 0;
+  border-top: 1px dashed hsl(0, 78%, 52%);
+}
+
+.slide-edit-toast {
+  position: fixed;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: 90%;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: hsl(210, 28%, 18%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.slide-edit-toast.is-visible {
+  opacity: 1;
+}

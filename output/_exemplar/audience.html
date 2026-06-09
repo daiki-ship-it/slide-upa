@@ -25,7 +25,7 @@
           aria-hidden="true"
         >
         <div class="slide__body">
-          <h1 class="slide__main-title">AIが毎朝タスク進捗を<br>自動報告する仕組み</h1>
+          <h1 class="slide__main-title" data-edit-id="s0-title" data-edit-text>AIが毎朝タスク進捗を<br>自動報告する仕組み</h1>
         </div>
         <div class="slide__bar slide__bar--bottom" aria-hidden="true"></div>
         <footer class="slide__footer">
@@ -38,19 +38,19 @@
       <section class="slide slide--bullets" data-type="bullets" aria-hidden="true">
         <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
         <div class="slide__body">
-          <h2 class="slide__section-title">1-1. 今日のゴール</h2>
+          <h2 class="slide__section-title" data-edit-id="s1-title" data-edit-text>1-1. 今日のゴール</h2>
           <ul class="slide__list">
-            <li class="slide__list-item">
+            <li class="slide__list-item" data-edit-id="s1-b0">
               <i data-lucide="target" class="slide__list-icon" aria-hidden="true"></i>
-              <span>毎朝の進捗報告を<strong>自動化</strong>する全体像を掴む</span>
+              <span data-edit-text>毎朝の進捗報告を<strong>自動化</strong>する全体像を掴む</span>
             </li>
-            <li class="slide__list-item">
+            <li class="slide__list-item" data-edit-id="s1-b1">
               <i data-lucide="list-checks" class="slide__list-icon" aria-hidden="true"></i>
-              <span>自分の業務に置き換えるための<strong>4ステップ</strong>を理解する</span>
+              <span data-edit-text>自分の業務に置き換えるための<strong>4ステップ</strong>を理解する</span>
             </li>
-            <li class="slide__list-item">
+            <li class="slide__list-item" data-edit-id="s1-b2">
               <i data-lucide="calendar-check" class="slide__list-icon" aria-hidden="true"></i>
-              <span>次回までに<strong>タスク一覧</strong>を1つ用意する</span>
+              <span data-edit-text>次回までに<strong>タスク一覧</strong>を1つ用意する</span>
             </li>
           </ul>
         </div>
@@ -65,18 +65,19 @@
       <section class="slide slide--quote" data-type="quote" aria-hidden="true">
         <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
         <div class="slide__body">
-          <h2 class="slide__section-title">1-2. 一番覚えておくこと</h2>
+          <h2 class="slide__section-title" data-edit-id="s2-title" data-edit-text>1-2. 一番覚えておくこと</h2>
           <div class="slide__content">
             <img
               class="slide__quote-char"
+              data-edit-id="s2-char"
               src="images/ウパ博士-諭す-512×512-透過.png"
               alt=""
               width="200"
               height="200"
             >
-            <div class="slide__bubble">
-              <p class="slide__bubble-lead">ポイントは</p>
-              <p class="slide__bubble-key">「人が毎回書かなくていい」ことです</p>
+            <div class="slide__bubble" data-edit-id="s2-bubble">
+              <p class="slide__bubble-lead" data-edit-text>ポイントは</p>
+              <p class="slide__bubble-key" data-edit-text>「人が毎回書かなくていい」ことです</p>
             </div>
           </div>
         </div>
@@ -91,7 +92,7 @@
       <section class="slide slide--visual" data-type="visual" aria-hidden="true">
         <div class="slide__bar slide__bar--top" aria-hidden="true"></div>
         <div class="slide__body">
-          <h2 class="slide__section-title">2-2. 全体の流れ</h2>
+          <h2 class="slide__section-title" data-edit-id="s3-title" data-edit-text>2-2. 全体の流れ</h2>
           <div class="slide__visual-area">
             <div class="slide__visual-slot">
               <!-- 後から images/ に画像を置き、<img class="slide__visual-img" src="images/..." alt=""> を入れる -->
@@ -112,5 +113,7 @@
     if (window.lucide) lucide.createIcons();
   </script>
   <script src="slides.js"></script>
+  <script src="slide-snap.js"></script>
+  <script src="slide-edit.js"></script>
 </body>
 </html>

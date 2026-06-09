@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>slide-upa studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="/studio/studio.css">
+</head>
+<body>
+  <div class="app" data-mode="present">
+    <header class="app-header">
+      <div class="app-header__brand">
+        <img class="app-header__logo" src="/assets/characters/ウパ博士-標準-512×512-透過.png" alt="" width="36" height="36">
+        <div class="app-header__titles">
+          <p class="app-header__eyebrow">slide-upa</p>
+          <h1 class="app-header__title" id="project-title">読み込み中…</h1>
+        </div>
+      </div>
+
+      <div class="app-header__controls">
+        <div class="seg" role="tablist" aria-label="表示モード">
+          <button type="button" class="seg__btn is-active" data-mode="present" role="tab" aria-selected="true">
+            <i data-lucide="layout-panel-left" aria-hidden="true"></i>
+            通常
+          </button>
+          <button type="button" class="seg__btn" data-mode="overview" role="tab" aria-selected="false">
+            <i data-lucide="rows-3" aria-hidden="true"></i>
+            全体確認
+          </button>
+        </div>
+
+        <button type="button" class="btn btn--primary" id="btn-mtg">
+          <i data-lucide="presentation" aria-hidden="true"></i>
+          MTG開始
+        </button>
+      </div>
+    </header>
+
+    <div class="app-body app-body--present" id="view-present">
+      <aside class="pane pane--projects" aria-label="プロジェクト一覧">
+        <div class="pane__head">
+          <span class="pane__label">プロジェクト</span>
+          <span class="pane__meta" id="project-count">—</span>
+        </div>
+        <ul class="project-list" id="project-list"></ul>
+      </aside>
+
+      <aside class="pane pane--thumbs" aria-label="スライド一覧">
+        <div class="pane__head">
+          <span class="pane__label">スライド</span>
+          <span class="pane__meta" id="slide-count">—</span>
+        </div>
+        <ul class="thumb-list" id="thumb-list"></ul>
+      </aside>
+
+      <main class="pane pane--stage" aria-label="スライドプレビュー">
+        <div class="pane__head pane__head--stage stage__edit-bar" id="edit-toolbar">
+          <span class="stage__edit-label">編集</span>
+          <button type="button" class="btn btn--sm" id="btn-group" title="選択した要素をグループ化">
+            <i data-lucide="layers" aria-hidden="true"></i>
+            グループ化
+          </button>
+          <button type="button" class="btn btn--sm" id="btn-ungroup" title="グループを解除">
+            <i data-lucide="unlink" aria-hidden="true"></i>
+            解除
+          </button>
+          <button type="button" class="btn btn--sm" id="btn-check-spacing" title="縦の余白を確認">
+            <i data-lucide="ruler" aria-hidden="true"></i>
+            余白を確認
+          </button>
+          <button type="button" class="btn btn--sm" id="btn-distribute" title="縦の余白を均等化">
+            <i data-lucide="align-center" aria-hidden="true"></i>
+            余白を均等化
+          </button>
+          <button type="button" class="btn btn--sm btn--primary" id="btn-save-edit" title="スライドに保存（台本は変えません）">
+            <i data-lucide="save" aria-hidden="true"></i>
+            保存
+          </button>
+          <span class="stage__edit-hint" id="edit-status"></span>
+        </div>
+        <div class="stage__frame-wrap">
+          <iframe
+            id="slide-frame"
+            class="stage__frame"
+            title="スライドプレビュー"
+            sandbox="allow-scripts allow-same-origin"
+          ></iframe>
+        </div>
+      </main>
+
+      <aside class="pane pane--script" aria-label="台本">
+        <div class="pane__head">
+          <span class="pane__label">台本</span>
+        </div>
+        <div class="script-panel">
+          <p class="script-panel__text" id="script-text"></p>
+        </div>
+        <div class="script-panel__hint">
+          <i data-lucide="info" aria-hidden="true"></i>
+          スライドの文言・位置は中央プレビューで編集できます。構造の変更はカーソルで台本を直し、再生成してください。
+        </div>
+      </aside>
+    </div>
+
+    <div class="app-body app-body--overview is-hidden" id="view-overview" aria-label="全体確認">
+      <div class="overview-scroll" id="overview-list"></div>
+    </div>
+  </div>
+
+  <script src="/studio/studio.js"></script>
+  <script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>
