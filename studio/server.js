@@ -355,27 +355,32 @@ function readBody(req) {
   });
 }
 
-function updateScriptMdSection(scriptContent, heading, newScript) {
-  const lines = scriptContent.split("\n");
+function findSectionBounds(lines, heading) {
   const headingLine = `### ${heading}`;
-
   let headingIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trimEnd() === headingLine) {
-      headingIdx = i;
-      break;
-    }
+    if (lines[i].trimEnd() === headingLine) { headingIdx = i; break; }
   }
-  if (headingIdx === -1) return scriptContent; // 見出しが見つからなければ変更しない
-
+  if (headingIdx === -1) return null;
   let nextHeadingIdx = lines.length;
   for (let i = headingIdx + 1; i < lines.length; i++) {
-    if (/^#{1,6} /.test(lines[i])) {
-      nextHeadingIdx = i;
-      break;
-    }
+    if (/^#{1,6} /.test(lines[i])) { nextHeadingIdx = i; break; }
+  }
+  return { headingIdx, nextHeadingIdx };
+}
+
+function updateScriptMdSection(scriptContent, heading, newScript) {
+  const lines = scriptContent.split("\n");
+  const bounds = findSectionBounds(lines, heading);
+
+  if (!bounds) {
+    // 見出しが存在しない → 末尾に追記
+    const trimmed = newScript.trim();
+    const section = trimmed ? `\n\n### ${heading}\n\n${trimmed}\n` : `\n\n### ${heading}\n`;
+    return scriptContent.trimEnd() + section;
   }
 
+  const { headingIdx, nextHeadingIdx } = bounds;
   const sectionLines = lines.slice(headingIdx + 1, nextHeadingIdx);
   const directiveLines = sectionLines.filter((l) => l.trimStart().startsWith("["));
 
@@ -391,6 +396,44 @@ function updateScriptMdSection(scriptContent, heading, newScript) {
   if (nextHeadingIdx < lines.length) newParts.push("");
 
   return [...lines.slice(0, headingIdx + 1), ...newParts, ...lines.slice(nextHeadingIdx)].join("\n");
+}
+
+function insertSlideIntoScriptMd(scriptContent, afterHeading, newHeading) {
+  const lines = scriptContent.split("\n");
+  const bounds = findSectionBounds(lines, afterHeading);
+
+  const newSection = [`### ${newHeading}`, ""];
+
+  if (!bounds) {
+    // 前のスライドのセクションが見つからない → 末尾に追記
+    return scriptContent.trimEnd() + `\n\n### ${newHeading}\n`;
+  }
+
+  const { nextHeadingIdx } = bounds;
+  // 前のセクション末尾の空行を保持しつつ新セクションを差し込む
+  return [
+    ...lines.slice(0, nextHeadingIdx),
+    "",
+    ...newSection,
+    ...lines.slice(nextHeadingIdx),
+  ].join("\n");
+}
+
+function removeSlideFromScriptMd(scriptContent, heading) {
+  const lines = scriptContent.split("\n");
+  const bounds = findSectionBounds(lines, heading);
+  if (!bounds) return scriptContent;
+
+  const { headingIdx, nextHeadingIdx } = bounds;
+  // セクション直前の余分な空行も一緒に除去
+  let removeFrom = headingIdx;
+  while (removeFrom > 0 && lines[removeFrom - 1].trim() === "") removeFrom--;
+
+  // 前のセクションとの間に空行を1行残す
+  const before = lines.slice(0, removeFrom);
+  const after = lines.slice(nextHeadingIdx);
+  const separator = after.length > 0 ? [""] : [];
+  return [...before, ...separator, ...after].join("\n");
 }
 
 function serveFile(res, filePath) {
@@ -489,6 +532,13 @@ const server = http.createServer((req, res) => {
         fs.writeFileSync(audiencePath, newAudienceHtml, "utf8");
         writeOverrides(id, newOverrides);
 
+        const scriptPath = path.join(dir, "script.md");
+        if (fs.existsSync(scriptPath)) {
+          const afterHeading = deck.slides[afterIndex].heading;
+          const updated = insertSlideIntoScriptMd(fs.readFileSync(scriptPath, "utf8"), afterHeading, heading);
+          fs.writeFileSync(scriptPath, updated, "utf8");
+        }
+
         sendJson(res, 200, { ok: true, deck: newDeck, newSlideIndex: newSlideIdx });
       })
       .catch(() => sendJson(res, 400, { error: "Invalid JSON" }));
@@ -521,6 +571,13 @@ const server = http.createServer((req, res) => {
     fs.writeFileSync(deckPath, JSON.stringify(newDeck, null, 2), "utf8");
     fs.writeFileSync(audiencePath, newAudienceHtml, "utf8");
     writeOverrides(id, newOverrides);
+
+    const scriptPathDel = path.join(dir, "script.md");
+    if (fs.existsSync(scriptPathDel)) {
+      const deletedHeading = deck.slides[index].heading;
+      const updated = removeSlideFromScriptMd(fs.readFileSync(scriptPathDel, "utf8"), deletedHeading);
+      fs.writeFileSync(scriptPathDel, updated, "utf8");
+    }
 
     sendJson(res, 200, { ok: true, deck: newDeck });
     return;
