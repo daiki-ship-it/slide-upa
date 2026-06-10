@@ -196,7 +196,7 @@ body {
 
 .slide--bullets .slide__list-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
   font-size: clamp(1.3rem, 2.2cqw, 1.65rem);
   line-height: 1.5;
@@ -206,7 +206,6 @@ body {
   flex-shrink: 0;
   width: 1.75rem;
   height: 1.75rem;
-  margin-top: 0.15rem;
   color: var(--brand-primary);
 }
 
