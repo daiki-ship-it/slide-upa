@@ -158,15 +158,15 @@ ${top}
           <h2 class="slide__section-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
           <ul class="slide__list">
             <li class="slide__list-item" data-edit-id="${s}-b0">
-              <i data-lucide="arrow-right" class="slide__list-icon" aria-hidden="true"></i>
+              <i data-lucide="target" class="slide__list-icon" aria-hidden="true"></i>
               <span data-edit-text>ポイント 1</span>
             </li>
             <li class="slide__list-item" data-edit-id="${s}-b1">
-              <i data-lucide="arrow-right" class="slide__list-icon" aria-hidden="true"></i>
+              <i data-lucide="target" class="slide__list-icon" aria-hidden="true"></i>
               <span data-edit-text>ポイント 2</span>
             </li>
             <li class="slide__list-item" data-edit-id="${s}-b2">
-              <i data-lucide="arrow-right" class="slide__list-icon" aria-hidden="true"></i>
+              <i data-lucide="target" class="slide__list-icon" aria-hidden="true"></i>
               <span data-edit-text>ポイント 3</span>
             </li>
           </ul>
