@@ -6,6 +6,7 @@ const els = {
   projectCount: document.getElementById("project-count"),
   projectList: document.getElementById("project-list"),
   slideCount: document.getElementById("slide-count"),
+  btnAddSlide: document.getElementById("btn-add-slide"),
   thumbList: document.getElementById("thumb-list"),
   slideFrame: document.getElementById("slide-frame"),
   scriptText: document.getElementById("script-text"),
@@ -223,6 +224,8 @@ function renderThumbs() {
   els.thumbList.replaceChildren();
   slides.forEach((slide, i) => {
     const li = document.createElement("li");
+    li.className = "thumb-item";
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "thumb" + (i === state.index ? " is-active" : "");
@@ -236,9 +239,45 @@ function renderThumbs() {
       <p class="thumb__title">${escapeHtml(slide.heading)}</p>
     `;
     btn.addEventListener("click", () => goTo(i, true));
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "thumb__delete";
+    delBtn.setAttribute("title", `スライド ${i + 1} を削除`);
+    delBtn.setAttribute("aria-label", `スライド ${i + 1} を削除`);
+    delBtn.innerHTML = `<i data-lucide="x" aria-hidden="true"></i>`;
+    delBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (slides.length <= 1) { alert("最後のスライドは削除できません"); return; }
+      if (!confirm(`スライド ${i + 1}「${slide.heading}」を削除しますか？`)) return;
+      await deleteSlide(i);
+    });
+
     li.appendChild(btn);
+    li.appendChild(delBtn);
     els.thumbList.appendChild(li);
   });
+  if (window.lucide) lucide.createIcons({ nodes: els.thumbList.querySelectorAll("[data-lucide]") });
+}
+
+async function deleteSlide(index) {
+  if (!state.projectId) return;
+  try {
+    const res = await fetch(
+      `/api/projects/${encodeURIComponent(state.projectId)}/slides/${index}`,
+      { method: "DELETE" }
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "スライドの削除に失敗しました");
+    }
+    const targetIndex = Math.max(0, index - 1);
+    await loadProject(state.projectId);
+    goTo(targetIndex, false);
+  } catch (err) {
+    alert(err.message);
+    console.error(err);
+  }
 }
 
 function renderOverview() {
@@ -475,6 +514,54 @@ function stepSpacingInput(delta) {
   const next = Math.min(240, Math.max(0, base + delta));
   els.spacingInput.value = String(next);
 }
+
+// --- Slide picker ---
+const pickerDialog = document.getElementById("slide-picker");
+const pickerSub = document.getElementById("slide-picker-sub");
+
+function openSlidePicker() {
+  pickerSub.textContent = `スライド ${state.index + 1} の後に挿入`;
+  pickerDialog.showModal();
+}
+
+document.getElementById("btn-picker-close").addEventListener("click", () => pickerDialog.close());
+
+pickerDialog.addEventListener("click", (e) => {
+  if (e.target === pickerDialog) pickerDialog.close();
+});
+
+pickerDialog.querySelectorAll(".tpl-card").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const type = btn.dataset.type;
+    pickerDialog.close();
+    await addSlideAfterCurrent(type);
+  });
+});
+
+async function addSlideAfterCurrent(type) {
+  if (!state.projectId) return;
+  const afterIndex = state.index;
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(state.projectId)}/slides`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ afterIndex, type, heading: "新しいスライド" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "スライドの追加に失敗しました");
+    }
+    const data = await res.json();
+    await loadProject(state.projectId);
+    goTo(data.newSlideIndex, false);
+  } catch (err) {
+    alert(err.message);
+    console.error(err);
+  }
+}
+
+els.btnAddSlide.addEventListener("click", openSlidePicker);
+// --- end Slide picker ---
 
 els.btnMtg.addEventListener("click", openMtg);
 els.btnGroup.addEventListener("click", () => sendEditCmd("group"));

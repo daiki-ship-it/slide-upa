@@ -102,6 +102,221 @@ function writeOverrides(id, data) {
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 
+const SLIDE_TYPE_LABELS = { title: "表紙", bullets: "要点", quote: "一言", visual: "画像" };
+
+function escXml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function getFooterIconSrc(html) {
+  const m = html.match(/class="slide__icon"[^>]*\bsrc="([^"]+)"/);
+  return m ? m[1] : "images/ウパ博士-標準-512×512-透過.png";
+}
+
+function resolveCharVariant(iconSrc, variant, imagesDir) {
+  const swapped = iconSrc.replace(/[^-/]+-512×512/, `${variant}-512×512`);
+  const fname = path.basename(swapped);
+  if (fs.existsSync(path.join(imagesDir, fname))) return swapped;
+  return iconSrc;
+}
+
+function buildNewSlideHtml(idx, type, heading, iconSrc, imagesDir) {
+  const s = `s${idx}`;
+  const h = escXml(heading);
+  const top = `      <div class="slide__bar slide__bar--top" aria-hidden="true"></div>`;
+  const bot = `      <div class="slide__bar slide__bar--bottom" aria-hidden="true"></div>`;
+  const footer = `      <footer class="slide__footer">
+        <img class="slide__icon" data-edit-char src="${iconSrc}" alt="" width="32" height="32">
+        <span class="slide__page">0 / 0</span>
+      </footer>`;
+
+  if (type === "title") {
+    const watermark = resolveCharVariant(iconSrc, "真顔", imagesDir);
+    return `<section class="slide slide--title" data-type="title" aria-hidden="true">
+${top}
+        <img
+          class="slide__watermark"
+          data-edit-id="${s}-watermark"
+          data-edit-char
+          src="${watermark}"
+          alt=""
+          width="560"
+          height="560"
+          aria-hidden="true"
+        >
+        <div class="slide__body">
+          <h1 class="slide__main-title" data-edit-id="${s}-title" data-edit-text>${h}</h1>
+        </div>
+${bot}
+${footer}
+      </section>`;
+  }
+  if (type === "bullets") {
+    return `<section class="slide slide--bullets" data-type="bullets" aria-hidden="true">
+${top}
+        <div class="slide__body">
+          <h2 class="slide__section-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
+          <ul class="slide__list">
+            <li class="slide__list-item" data-edit-id="${s}-b0">
+              <i data-lucide="arrow-right" class="slide__list-icon" aria-hidden="true"></i>
+              <span data-edit-text>ポイント 1</span>
+            </li>
+            <li class="slide__list-item" data-edit-id="${s}-b1">
+              <i data-lucide="arrow-right" class="slide__list-icon" aria-hidden="true"></i>
+              <span data-edit-text>ポイント 2</span>
+            </li>
+            <li class="slide__list-item" data-edit-id="${s}-b2">
+              <i data-lucide="arrow-right" class="slide__list-icon" aria-hidden="true"></i>
+              <span data-edit-text>ポイント 3</span>
+            </li>
+          </ul>
+        </div>
+${bot}
+${footer}
+      </section>`;
+  }
+  if (type === "quote") {
+    const charSrc = resolveCharVariant(iconSrc, "諭す", imagesDir);
+    return `<section class="slide slide--quote" data-type="quote" aria-hidden="true">
+${top}
+        <div class="slide__body">
+          <h2 class="slide__section-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
+          <div class="slide__content">
+            <img
+              class="slide__quote-char"
+              data-edit-id="${s}-char"
+              data-edit-char
+              src="${charSrc}"
+              alt=""
+              width="200"
+              height="200"
+            >
+            <div class="slide__bubble" data-edit-id="${s}-bubble">
+              <p class="slide__bubble-lead" data-edit-text>ポイントは</p>
+              <p class="slide__bubble-key" data-edit-text>ここに書く</p>
+            </div>
+          </div>
+        </div>
+${bot}
+${footer}
+      </section>`;
+  }
+  // visual (default)
+  return `<section class="slide slide--visual" data-type="visual" aria-hidden="true">
+${top}
+        <div class="slide__body">
+          <h2 class="slide__section-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
+          <div class="slide__visual-area">
+            <div
+              class="slide__visual-slot"
+              data-edit-id="${s}-visual0"
+              data-edit-visual=""
+              aria-label="クリックして画像をアップロード"
+            >
+            </div>
+          </div>
+        </div>
+${bot}
+${footer}
+      </section>`;
+}
+
+function findSlideEndPositions(html) {
+  const positions = [];
+  const re = /<section class="slide/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const closeIdx = html.indexOf("</section>", m.index);
+    if (closeIdx !== -1) positions.push(closeIdx + "</section>".length);
+  }
+  return positions;
+}
+
+function insertSlideIntoHtml(html, afterIndex, newSlideHtml, newTotal) {
+  // Shift existing data-edit-ids for slides AFTER insertion point first
+  html = html.replace(/data-edit-id="s(\d+)-/g, (match, n) => {
+    if (parseInt(n) > afterIndex) return `data-edit-id="s${parseInt(n) + 1}-`;
+    return match;
+  });
+
+  const endPositions = findSlideEndPositions(html);
+  const insertAt = endPositions[afterIndex];
+  html = html.slice(0, insertAt) + "\n\n      " + newSlideHtml + html.slice(insertAt);
+
+  let pageNum = 0;
+  html = html.replace(/<span class="slide__page">[^<]*<\/span>/g, () => {
+    pageNum++;
+    return `<span class="slide__page">${pageNum} / ${newTotal}</span>`;
+  });
+
+  return html;
+}
+
+function addSlideToDeck(deck, afterIndex, type, heading) {
+  const typeLabel = SLIDE_TYPE_LABELS[type] ?? type;
+  const newSlides = [
+    ...deck.slides.slice(0, afterIndex + 1),
+    { index: afterIndex + 1, type, typeLabel, heading, script: "" },
+    ...deck.slides.slice(afterIndex + 1),
+  ];
+  newSlides.forEach((s, i) => { s.index = i; });
+  return { ...deck, slides: newSlides };
+}
+
+function shiftOverrides(overrides, afterIndex) {
+  const slides = overrides.slides ?? {};
+  const newSlides = {};
+  for (const [key, value] of Object.entries(slides)) {
+    const idx = parseInt(key, 10);
+    newSlides[idx > afterIndex ? String(idx + 1) : key] = value;
+  }
+  return { ...overrides, slides: newSlides };
+}
+
+function removeSlideFromHtml(html, index, newTotal) {
+  const re = /<section class="slide/g;
+  let count = 0;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    if (count === index) {
+      const closeIdx = html.indexOf("</section>", m.index);
+      if (closeIdx === -1) return html;
+      html = html.slice(0, m.index) + html.slice(closeIdx + "</section>".length);
+      break;
+    }
+    count++;
+  }
+  html = html.replace(/\n{3,}/g, "\n\n");
+  html = html.replace(/data-edit-id="s(\d+)-/g, (match, n) => {
+    const num = parseInt(n);
+    if (num > index) return `data-edit-id="s${num - 1}-`;
+    return match;
+  });
+  let pageNum = 0;
+  html = html.replace(/<span class="slide__page">[^<]*<\/span>/g, () => {
+    pageNum++;
+    return `<span class="slide__page">${pageNum} / ${newTotal}</span>`;
+  });
+  return html;
+}
+
+function removeSlideFromDeck(deck, index) {
+  const newSlides = deck.slides.filter((_, i) => i !== index);
+  newSlides.forEach((s, i) => { s.index = i; });
+  return { ...deck, slides: newSlides };
+}
+
+function unshiftOverrides(overrides, index) {
+  const slides = overrides.slides ?? {};
+  const newSlides = {};
+  for (const [key, value] of Object.entries(slides)) {
+    const idx = parseInt(key, 10);
+    if (idx === index) continue;
+    newSlides[idx > index ? String(idx - 1) : key] = value;
+  }
+  return { ...overrides, slides: newSlides };
+}
+
 function sanitizeImageFilename(name) {
   const ext = path.extname(name).toLowerCase();
   if (!IMAGE_EXT.has(ext)) return null;
@@ -233,6 +448,82 @@ const server = http.createServer((req, res) => {
         });
       return;
     }
+  }
+
+  const slidesMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/slides$/);
+  if (slidesMatch && req.method === "POST") {
+    const id = decodeURIComponent(slidesMatch[1]);
+    readBody(req)
+      .then((body) => {
+        const dir = projectDir(id);
+        if (!dir) { sendJson(res, 404, { error: "Project not found" }); return; }
+
+        const afterIndex = Number(body.afterIndex);
+        const type = String(body.type ?? "bullets");
+        const heading = String(body.heading ?? "新しいスライド");
+
+        if (!Object.hasOwn(SLIDE_TYPE_LABELS, type)) {
+          sendJson(res, 400, { error: "Invalid slide type" }); return;
+        }
+
+        const deckPath = path.join(dir, "deck.json");
+        const audiencePath = path.join(dir, "audience.html");
+        const imagesDir = path.join(dir, "images");
+
+        const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
+        const audienceHtml = fs.readFileSync(audiencePath, "utf8");
+
+        if (!Number.isFinite(afterIndex) || afterIndex < 0 || afterIndex >= deck.slides.length) {
+          sendJson(res, 400, { error: "Invalid afterIndex" }); return;
+        }
+
+        const newSlideIdx = afterIndex + 1;
+        const newTotal = deck.slides.length + 1;
+        const iconSrc = getFooterIconSrc(audienceHtml);
+        const newSlideHtml = buildNewSlideHtml(newSlideIdx, type, heading, iconSrc, imagesDir);
+        const newAudienceHtml = insertSlideIntoHtml(audienceHtml, afterIndex, newSlideHtml, newTotal);
+        const newDeck = addSlideToDeck(deck, afterIndex, type, heading);
+        const newOverrides = shiftOverrides(readOverrides(id) ?? { slides: {} }, afterIndex);
+
+        fs.writeFileSync(deckPath, JSON.stringify(newDeck, null, 2), "utf8");
+        fs.writeFileSync(audiencePath, newAudienceHtml, "utf8");
+        writeOverrides(id, newOverrides);
+
+        sendJson(res, 200, { ok: true, deck: newDeck, newSlideIndex: newSlideIdx });
+      })
+      .catch(() => sendJson(res, 400, { error: "Invalid JSON" }));
+    return;
+  }
+
+  const slideIndexMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/slides\/(\d+)$/);
+  if (slideIndexMatch && req.method === "DELETE") {
+    const id = decodeURIComponent(slideIndexMatch[1]);
+    const index = parseInt(slideIndexMatch[2], 10);
+    const dir = projectDir(id);
+    if (!dir) { sendJson(res, 404, { error: "Project not found" }); return; }
+
+    const deckPath = path.join(dir, "deck.json");
+    const audiencePath = path.join(dir, "audience.html");
+    const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
+
+    if (index < 0 || index >= deck.slides.length) {
+      sendJson(res, 400, { error: "Invalid slide index" }); return;
+    }
+    if (deck.slides.length <= 1) {
+      sendJson(res, 400, { error: "最後のスライドは削除できません" }); return;
+    }
+
+    const newTotal = deck.slides.length - 1;
+    const newAudienceHtml = removeSlideFromHtml(fs.readFileSync(audiencePath, "utf8"), index, newTotal);
+    const newDeck = removeSlideFromDeck(deck, index);
+    const newOverrides = unshiftOverrides(readOverrides(id) ?? { slides: {} }, index);
+
+    fs.writeFileSync(deckPath, JSON.stringify(newDeck, null, 2), "utf8");
+    fs.writeFileSync(audiencePath, newAudienceHtml, "utf8");
+    writeOverrides(id, newOverrides);
+
+    sendJson(res, 200, { ok: true, deck: newDeck });
+    return;
   }
 
   const deployMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/deploy$/);

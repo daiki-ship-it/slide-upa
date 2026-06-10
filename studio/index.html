@@ -51,7 +51,12 @@
       <aside class="pane pane--thumbs" aria-label="スライド一覧">
         <div class="pane__head">
           <span class="pane__label">スライド</span>
-          <span class="pane__meta" id="slide-count">—</span>
+          <div class="pane__head-end">
+            <span class="pane__meta" id="slide-count">—</span>
+            <button type="button" class="btn btn--ghost btn--icon btn--add-slide" id="btn-add-slide" title="スライドを追加" aria-label="スライドを追加">
+              <i data-lucide="plus" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
         <ul class="thumb-list" id="thumb-list"></ul>
       </aside>
@@ -131,7 +136,7 @@
         </div>
         <div class="script-panel__hint">
           <i data-lucide="info" aria-hidden="true"></i>
-          台本はここで直接編集・保存できます。レイアウト変更は中央プレビューで。スライドの追加・削除はファイルを直し再生成してください。
+          台本はここで直接編集・保存できます。レイアウト変更は中央プレビューで。スライドの追加は「スライド」欄の＋ボタンから。削除はファイルを直し再生成してください。
         </div>
       </aside>
     </div>
@@ -140,6 +145,50 @@
       <div class="overview-scroll" id="overview-list"></div>
     </div>
   </div>
+
+  <dialog class="slide-picker" id="slide-picker" aria-label="スライドを追加">
+    <div class="slide-picker__inner">
+      <header class="slide-picker__head">
+        <div>
+          <h2 class="slide-picker__title">スライドを追加</h2>
+          <p class="slide-picker__sub" id="slide-picker-sub"></p>
+        </div>
+        <button type="button" class="btn btn--ghost btn--icon" id="btn-picker-close" aria-label="閉じる">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+      </header>
+      <ul class="tpl-list" role="list">
+        <li>
+          <button type="button" class="tpl-card" data-type="title">
+            <span class="tpl-card__badge badge badge--title">表紙</span>
+            <p class="tpl-card__name">表紙スライド</p>
+            <p class="tpl-card__desc">大きなタイトルと背景キャラクター</p>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="tpl-card" data-type="bullets">
+            <span class="tpl-card__badge badge badge--bullets">要点</span>
+            <p class="tpl-card__name">要点リスト</p>
+            <p class="tpl-card__desc">タイトルと箇条書き 3 項目</p>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="tpl-card" data-type="quote">
+            <span class="tpl-card__badge badge badge--quote">一言</span>
+            <p class="tpl-card__name">一言スライド</p>
+            <p class="tpl-card__desc">吹き出しとキャラクター</p>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="tpl-card" data-type="visual">
+            <span class="tpl-card__badge badge badge--visual">画像</span>
+            <p class="tpl-card__name">画像スライド</p>
+            <p class="tpl-card__desc">タイトルと画像アップロードエリア</p>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </dialog>
 
   <script src="/studio/studio.js"></script>
   <script>if (window.lucide) lucide.createIcons();</script>
