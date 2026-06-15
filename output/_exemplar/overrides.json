@@ -1,14 +1,20 @@
 {
   "slides": {
+    "0": {
+      "elements": {}
+    },
     "1": {
-      "elements": {
-        "s1-title": {
-          "translateX": 0,
-          "translateY": 0,
-          "html": "1-1. ゴール",
-          "group": null
-        }
-      }
+      "elements": {}
+    },
+    "2": {
+      "elements": {}
+    },
+    "3": {
+      "elements": {}
+    },
+    "4": {
+      "elements": {},
+      "visualSlotCount": 1
     }
   }
 }

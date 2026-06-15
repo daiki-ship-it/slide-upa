@@ -603,6 +603,124 @@
   }
 
   // ─────────────────────────────────────────────────────────────
+  // 台本（script.md）同期 — スライド上のテキスト編集を保存時に反映
+
+  function htmlToMarkdownInline(html) {
+    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+    const root = doc.body.firstElementChild;
+    if (!root) return "";
+
+    const walk = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+      if (node.nodeName === "STRONG" || node.nodeName === "B") {
+        return `**${[...node.childNodes].map(walk).join("")}**`;
+      }
+      if (node.nodeName === "BR") return "\n";
+      return [...node.childNodes].map(walk).join("");
+    };
+
+    return walk(root)
+      .replace(/\u00a0/g, " ")
+      .replace(/\n+/g, "\n")
+      .trim();
+  }
+
+  function getSlideTitleText(slide) {
+    const el = slide.querySelector("[data-edit-id$='-title']");
+    if (!el) return "";
+    return htmlToMarkdownInline(el.innerHTML).replace(/\n/g, " ").trim();
+  }
+
+  function slideHasTextEdits(slide) {
+    return [...slide.querySelectorAll("[data-edit-id]")].some((el) => {
+      if (el.hasAttribute("data-edit-visual") || el.hasAttribute("data-edit-char")) return false;
+      if (el.dataset.edited !== "1") return false;
+      return el.hasAttribute("data-edit-text") || el.querySelector("[data-edit-text]");
+    });
+  }
+
+  function collectTextPatches(slide) {
+    const patches = [];
+    const seen = new Set();
+
+    slide.querySelectorAll("[data-edit-id]").forEach((host) => {
+      if (host.dataset.edited !== "1") return;
+      if (host.hasAttribute("data-edit-visual") || host.hasAttribute("data-edit-char")) return;
+
+      if (host.hasAttribute("data-edit-text")) {
+        const key = `${host.dataset.editId}:self`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        patches.push({ editId: host.dataset.editId, mode: "self", html: host.innerHTML });
+        return;
+      }
+
+      if (host.querySelector(".slide__bubble-key")) {
+        const key = `${host.dataset.editId}:quote`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        patches.push({
+          editId: host.dataset.editId,
+          mode: "quote",
+          leadHtml: host.querySelector(".slide__bubble-lead")?.innerHTML ?? "",
+          keyHtml: host.querySelector(".slide__bubble-key")?.innerHTML ?? "",
+        });
+        return;
+      }
+
+      host.querySelectorAll("[data-edit-text]").forEach((textEl) => {
+        const key = `${host.dataset.editId}:span`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        patches.push({ editId: host.dataset.editId, mode: "span", html: textEl.innerHTML });
+      });
+    });
+
+    return patches;
+  }
+
+  function extractScriptSyncForSlide(slide, index) {
+    const type = slide.dataset.type || "bullets";
+    const heading = getSlideTitleText(slide);
+    const textPatches = collectTextPatches(slide);
+
+    if (type === "title") {
+      return { index, heading, script: "", textPatches };
+    }
+    if (type === "visual") {
+      return { index, heading, skipBody: true, textPatches };
+    }
+    if (type === "quote") {
+      const bubble = slide.querySelector(".slide__bubble");
+      const lead = bubble?.querySelector(".slide__bubble-lead");
+      const key = bubble?.querySelector(".slide__bubble-key");
+      const parts = [lead, key].filter(Boolean).map((el) => htmlToMarkdownInline(el.innerHTML));
+      const quoteText = parts.join("");
+      return {
+        index,
+        heading,
+        script: quoteText ? `[quote: ${quoteText}]` : "",
+        textPatches,
+      };
+    }
+    if (type === "bullets") {
+      const items = [...slide.querySelectorAll(".slide__list-item [data-edit-text]")].map(
+        (el) => `- ${htmlToMarkdownInline(el.innerHTML)}`
+      );
+      return { index, heading, script: items.join("\n"), textPatches };
+    }
+    return null;
+  }
+
+  function collectScriptSync() {
+    const sync = [];
+    document.querySelectorAll(".slide").forEach((slide, index) => {
+      if (!slideHasTextEdits(slide)) return;
+      const item = extractScriptSyncForSlide(slide, index);
+      if (item) sync.push(item);
+    });
+    return sync;
+  }
 
   async function saveOverrides() {
     const ov = SlideUpaOverrides.getData();
@@ -612,14 +730,24 @@
     });
     SlideUpaOverrides.setData(ov);
     if (!projectId) return false;
+
+    const scriptSync = collectScriptSync();
     const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/overrides`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(SlideUpaOverrides.getData()),
+      body: JSON.stringify({ ...SlideUpaOverrides.getData(), scriptSync }),
     });
     if (res.ok) {
-      showToast("保存しました（台本は変わりません）");
-      postToParent({ type: "saved", slideIndex });
+      const data = await res.json().catch(() => ({}));
+      showToast(
+        data.scriptSynced > 0 ? "保存しました（台本にも反映）" : "保存しました"
+      );
+      postToParent({
+        type: "saved",
+        slideIndex,
+        scriptSynced: data.scriptSynced ?? 0,
+        deck: data.deck ?? null,
+      });
       return true;
     }
     showToast("保存に失敗しました");

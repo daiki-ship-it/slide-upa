@@ -436,6 +436,189 @@ function removeSlideFromScriptMd(scriptContent, heading) {
   return [...before, ...separator, ...after].join("\n");
 }
 
+function renameScriptMdHeading(scriptContent, oldHeading, newHeading) {
+  if (!oldHeading || !newHeading || oldHeading === newHeading) return scriptContent;
+  const lines = scriptContent.split("\n");
+  const oldLine = `### ${oldHeading}`;
+  const newLine = `### ${newHeading}`;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd() === oldLine) {
+      lines[i] = newLine;
+      return lines.join("\n");
+    }
+  }
+  return scriptContent;
+}
+
+function renameScriptMdTitle(scriptContent, newTitle) {
+  const lines = scriptContent.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("# ") && !lines[i].startsWith("## ")) {
+      lines[i] = `# ${newTitle}`;
+      return lines.join("\n");
+    }
+  }
+  return scriptContent;
+}
+
+function patchAudienceElementById(html, editId, innerHtml) {
+  const marker = `data-edit-id="${editId}"`;
+  const startIdx = html.indexOf(marker);
+  if (startIdx === -1) return html;
+  const tagOpenStart = html.lastIndexOf("<", startIdx);
+  if (tagOpenStart === -1) return html;
+  const openEnd = html.indexOf(">", startIdx);
+  if (openEnd === -1) return html;
+  const tagMatch = html.slice(tagOpenStart, openEnd + 1).match(/^<(\w+)/);
+  if (!tagMatch) return html;
+  const tag = tagMatch[1];
+  const contentStart = openEnd + 1;
+  const closeTag = `</${tag}>`;
+  const closeIdx = html.indexOf(closeTag, contentStart);
+  if (closeIdx === -1) return html;
+  return html.slice(0, contentStart) + innerHtml + html.slice(closeIdx);
+}
+
+function patchAudienceSpanInEditId(html, editId, spanHtml) {
+  const marker = `data-edit-id="${editId}"`;
+  const startIdx = html.indexOf(marker);
+  if (startIdx === -1) return html;
+  const spanMarker = "data-edit-text>";
+  const spanStart = html.indexOf(spanMarker, startIdx);
+  if (spanStart === -1) return html;
+  const contentStart = spanStart + spanMarker.length;
+  const closeIdx = html.indexOf("</span>", contentStart);
+  if (closeIdx === -1) return html;
+  return html.slice(0, contentStart) + spanHtml + html.slice(closeIdx);
+}
+
+function patchAudienceQuoteBubble(html, editId, leadHtml, keyHtml) {
+  let result = html;
+  const marker = `data-edit-id="${editId}"`;
+  const startIdx = result.indexOf(marker);
+  if (startIdx === -1) return result;
+  const bubbleEnd = result.indexOf("</div>", startIdx);
+  if (bubbleEnd === -1) return result;
+  const bubble = result.slice(startIdx, bubbleEnd);
+
+  const patchQuotePart = (part, className, innerHtml) => {
+    const classMarker = `class="${className}"`;
+    const partStart = part.indexOf(classMarker);
+    if (partStart === -1) return part;
+    const textMarker = "data-edit-text>";
+    const textStart = part.indexOf(textMarker, partStart);
+    if (textStart === -1) return part;
+    const contentStart = textStart + textMarker.length;
+    const closeIdx = part.indexOf("</p>", contentStart);
+    if (closeIdx === -1) return part;
+    return part.slice(0, contentStart) + innerHtml + part.slice(closeIdx);
+  };
+
+  let nextBubble = patchQuotePart(bubble, "slide__bubble-lead", leadHtml);
+  nextBubble = patchQuotePart(nextBubble, "slide__bubble-key", keyHtml);
+  return result.slice(0, startIdx) + nextBubble + result.slice(bubbleEnd);
+}
+
+function applyAudienceTextPatches(html, patches) {
+  let result = html;
+  for (const patch of patches) {
+    if (patch.mode === "self") {
+      result = patchAudienceElementById(result, patch.editId, patch.html);
+    } else if (patch.mode === "span") {
+      result = patchAudienceSpanInEditId(result, patch.editId, patch.html);
+    } else if (patch.mode === "quote") {
+      result = patchAudienceQuoteBubble(result, patch.editId, patch.leadHtml ?? "", patch.keyHtml ?? "");
+    }
+  }
+  return result;
+}
+
+function stripSyncedTextOverrides(overrides, slideIndex, editIds) {
+  const key = String(slideIndex);
+  const slide = overrides.slides?.[key];
+  if (!slide?.elements) return;
+  for (const editId of editIds) {
+    const el = slide.elements[editId];
+    if (!el) continue;
+    delete el.html;
+    const hasLayout =
+      (el.translateX != null && el.translateX !== 0) ||
+      (el.translateY != null && el.translateY !== 0) ||
+      el.imageSrc != null ||
+      el.charSrc != null ||
+      (el.group != null && el.group !== "");
+    if (!hasLayout) {
+      delete slide.elements[editId];
+    }
+  }
+}
+
+function applyScriptSync(dir, overrides, scriptSync) {
+  if (!Array.isArray(scriptSync) || scriptSync.length === 0) {
+    return { synced: 0, deck: null };
+  }
+
+  const scriptPath = path.join(dir, "script.md");
+  const deckPath = path.join(dir, "deck.json");
+  const audiencePath = path.join(dir, "audience.html");
+  if (!fs.existsSync(deckPath)) return { synced: 0, deck: null };
+
+  let scriptContent = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
+  const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
+  let audienceHtml = fs.existsSync(audiencePath) ? fs.readFileSync(audiencePath, "utf8") : null;
+  let synced = 0;
+
+  for (const item of scriptSync) {
+    const index = Number(item.index);
+    if (!Number.isFinite(index) || index < 0 || index >= deck.slides.length) continue;
+
+    const slide = deck.slides[index];
+    const type = slide.type;
+    const oldHeading = slide.heading;
+    const newHeading = String(item.heading ?? oldHeading).trim();
+    const textPatches = Array.isArray(item.textPatches) ? item.textPatches : [];
+    const editIds = textPatches.map((p) => p.editId).filter(Boolean);
+
+    if (type === "title") {
+      if (newHeading && newHeading !== oldHeading) {
+        if (scriptContent) scriptContent = renameScriptMdTitle(scriptContent, newHeading);
+        deck.title = newHeading;
+        slide.heading = newHeading;
+      }
+    } else if (newHeading && newHeading !== oldHeading) {
+      if (scriptContent) {
+        scriptContent = renameScriptMdHeading(scriptContent, oldHeading, newHeading);
+      }
+      slide.heading = newHeading;
+    }
+
+    if (item.skipBody !== true && item.script != null && scriptContent) {
+      scriptContent = updateScriptMdSection(scriptContent, slide.heading, String(item.script));
+      slide.script = String(item.script);
+    }
+
+    if (audienceHtml && textPatches.length > 0) {
+      const patched = applyAudienceTextPatches(audienceHtml, textPatches);
+      if (patched !== audienceHtml) {
+        audienceHtml = patched;
+        stripSyncedTextOverrides(overrides, index, editIds);
+      }
+    }
+
+    synced += 1;
+  }
+
+  if (scriptContent && fs.existsSync(scriptPath)) {
+    fs.writeFileSync(scriptPath, scriptContent, "utf8");
+  }
+  fs.writeFileSync(deckPath, JSON.stringify(deck, null, 2), "utf8");
+  if (audienceHtml && fs.existsSync(audiencePath)) {
+    fs.writeFileSync(audiencePath, audienceHtml, "utf8");
+  }
+
+  return { synced, deck };
+}
+
 function serveFile(res, filePath) {
   if (!filePath.startsWith(ROOT) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     res.writeHead(404);
@@ -480,11 +663,25 @@ const server = http.createServer((req, res) => {
     if (req.method === "PUT") {
       readBody(req)
         .then((body) => {
-          if (!writeOverrides(id, body)) {
+          const dir = projectDir(id);
+          if (!dir) {
             sendJson(res, 404, { error: "Project not found" });
             return;
           }
-          sendJson(res, 200, { ok: true });
+          const { scriptSync, ...overrideData } = body ?? {};
+          if (!writeOverrides(id, overrideData)) {
+            sendJson(res, 404, { error: "Project not found" });
+            return;
+          }
+          let deck = null;
+          let synced = 0;
+          if (Array.isArray(scriptSync) && scriptSync.length > 0) {
+            const result = applyScriptSync(dir, overrideData, scriptSync);
+            deck = result.deck;
+            synced = result.synced;
+            writeOverrides(id, overrideData);
+          }
+          sendJson(res, 200, { ok: true, scriptSynced: synced, deck });
         })
         .catch(() => {
           sendJson(res, 400, { error: "Invalid JSON" });

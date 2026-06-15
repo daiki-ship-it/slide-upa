@@ -603,9 +603,28 @@ window.addEventListener("message", (e) => {
     state.editDirty = false;
     savedWaiter?.resolve();
     if (state.projectId) {
-      fetchOverrides(state.projectId)
-        .then((data) => {
-          state.overrides = data;
+      const reloadDeck = msg.deck
+        ? Promise.resolve(msg.deck)
+        : fetch(`/api/projects/${encodeURIComponent(state.projectId)}`)
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => data?.deck ?? null);
+
+      Promise.all([fetchOverrides(state.projectId), reloadDeck])
+        .then(async ([overrides, deck]) => {
+          state.overrides = overrides;
+          if (deck) {
+            state.deck = deck;
+            els.projectTitle.textContent = deck.title ?? state.projectId;
+            renderThumbs();
+            const slide = deck.slides[state.index];
+            if (slide && !state.scriptDirty) {
+              els.scriptText.value = slide.script ?? "";
+            }
+          }
+          if (msg.scriptSynced > 0 && state.audienceUrl) {
+            state.baseline = await loadSlideBaseline(state.audienceUrl);
+            els.slideFrame.src = audienceEmbedUrl();
+          }
           updateDriftUi();
           renderOverview();
         })
