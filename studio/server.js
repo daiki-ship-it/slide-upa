@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { deployProject, readDeployRecord } from "./deploy.js";
+import { linkAllContextScripts, writeCanonicalScript } from "../lib/context-script.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -652,7 +653,7 @@ function applyScriptSync(dir, overrides, scriptSync) {
   }
 
   if (scriptContent && fs.existsSync(scriptPath)) {
-    fs.writeFileSync(scriptPath, scriptContent, "utf8");
+    writeCanonicalScript(dir, scriptContent);
   }
   fs.writeFileSync(deckPath, JSON.stringify(deck, null, 2), "utf8");
   if (audienceHtml && fs.existsSync(audiencePath)) {
@@ -782,7 +783,7 @@ const server = http.createServer((req, res) => {
             afterSlide.type,
             type
           );
-          fs.writeFileSync(scriptPath, updated, "utf8");
+          writeCanonicalScript(dir, updated);
         }
 
         sendJson(res, 200, { ok: true, deck: newDeck, newSlideIndex: newSlideIdx });
@@ -826,7 +827,7 @@ const server = http.createServer((req, res) => {
         deletedSlide.heading,
         deletedSlide.type
       );
-      fs.writeFileSync(scriptPathDel, updated, "utf8");
+      writeCanonicalScript(dir, updated);
     }
 
     sendJson(res, 200, { ok: true, deck: newDeck });
@@ -915,7 +916,7 @@ const server = http.createServer((req, res) => {
             deck.slides[index].heading,
             body.script
           );
-          fs.writeFileSync(scriptPath, updated, "utf8");
+          writeCanonicalScript(dir, updated);
         }
 
         sendJson(res, 200, { ok: true });
@@ -956,5 +957,9 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
+  const linked = linkAllContextScripts(OUTPUT).filter((r) => r.linked || r.already);
+  if (linked.length > 0) {
+    console.log(`context script links: ${linked.map((r) => r.id).join(", ")}`);
+  }
   console.log(`slide-upa studio: http://localhost:${PORT}/`);
 });
