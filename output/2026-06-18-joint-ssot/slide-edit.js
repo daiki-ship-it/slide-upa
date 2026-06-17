@@ -925,8 +925,18 @@
     const heading = getSlideTitleText(slide);
     const textPatches = collectTextPatches(slide);
 
-    if (type === "title" || type === "chapter") {
+    if (type === "title") {
       return { index, heading, script: "", textPatches };
+    }
+    if (type === "chapter") {
+      const items = [...slide.querySelectorAll(".slide__agenda-item")].map((li) => {
+        const labelEl = li.querySelector(".slide__agenda-label");
+        const textEl = li.querySelector(".slide__agenda-text");
+        const labelMd = labelEl ? htmlToMarkdownInline(labelEl.innerHTML) : "";
+        const textMd = textEl ? htmlToMarkdownInline(textEl.innerHTML) : "";
+        return labelMd ? `- **${labelMd}** — ${textMd}` : `- ${textMd}`;
+      });
+      return { index, heading, script: items.join("\n"), skipBody: true, textPatches };
     }
     if (type === "goal") {
       const items = [...slide.querySelectorAll(".slide__goal-item")].map((li) => {
@@ -934,6 +944,16 @@
         const textEl = li.querySelector(".slide__goal-text");
         const textMd = textEl ? htmlToMarkdownInline(textEl.innerHTML) : "";
         return num ? `- **${num}**${textMd}` : `- ${textMd}`;
+      });
+      return { index, heading, script: items.join("\n"), textPatches };
+    }
+    if (type === "agenda") {
+      const items = [...slide.querySelectorAll(".slide__agenda-item")].map((li) => {
+        const labelEl = li.querySelector(".slide__agenda-label");
+        const textEl = li.querySelector(".slide__agenda-text");
+        const labelMd = labelEl ? htmlToMarkdownInline(labelEl.innerHTML) : "";
+        const textMd = textEl ? htmlToMarkdownInline(textEl.innerHTML) : "";
+        return labelMd ? `- **${labelMd}** — ${textMd}` : `- ${textMd}`;
       });
       return { index, heading, script: items.join("\n"), textPatches };
     }

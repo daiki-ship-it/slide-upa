@@ -103,7 +103,7 @@ function writeOverrides(id, data) {
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 
-const SLIDE_TYPE_LABELS = { title: "表紙", chapter: "章", goal: "ゴール", bullets: "要点", quote: "一言", visual: "画像" };
+const SLIDE_TYPE_LABELS = { title: "表紙", chapter: "章", goal: "ゴール", agenda: "アジェンダ", bullets: "要点", quote: "一言", visual: "画像" };
 
 function escXml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -119,6 +119,21 @@ function resolveCharVariant(iconSrc, variant, imagesDir) {
   const fname = path.basename(swapped);
   if (fs.existsSync(path.join(imagesDir, fname))) return swapped;
   return iconSrc;
+}
+
+function buildAgendaTimelineHtml(s, currentIndex) {
+  const labels = ["第1章", "第2章", "第3章"];
+  const texts = ["アジェンダ項目 1", "アジェンダ項目 2", "アジェンダ項目 3"];
+  return labels
+    .map((label, i) => {
+      const current = currentIndex === i ? " slide__agenda-item--current" : "";
+      return `            <li class="slide__agenda-item${current}" data-edit-id="${s}-a${i}">
+              <span class="slide__timeline-dot" aria-hidden="true"></span>
+              <span class="slide__agenda-label" data-edit-text>${label}</span>
+              <p class="slide__agenda-text" data-edit-text>${texts[i]}</p>
+            </li>`;
+    })
+    .join("\n");
 }
 
 function buildNewSlideHtml(idx, type, heading, iconSrc, imagesDir) {
@@ -153,21 +168,16 @@ ${footer}
       </section>`;
   }
   if (type === "chapter") {
-    const watermark = resolveCharVariant(iconSrc, "真顔", imagesDir);
     return `<section class="slide slide--chapter" data-type="chapter" aria-hidden="true">
 ${top}
-        <img
-          class="slide__watermark"
-          data-edit-id="${s}-watermark"
-          data-edit-char
-          src="${watermark}"
-          alt=""
-          width="560"
-          height="560"
-          aria-hidden="true"
-        >
         <div class="slide__body">
-          <h1 class="slide__main-title" data-edit-id="${s}-title" data-edit-text>${h}</h1>
+          <div class="slide__hero">
+            <p class="slide__hero-label" data-edit-id="${s}-label" data-edit-text>CHAPTER</p>
+            <h2 class="slide__hero-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
+          </div>
+          <ol class="slide__timeline">
+${buildAgendaTimelineHtml(s, 0)}
+          </ol>
         </div>
 ${bot}
 ${footer}
@@ -205,6 +215,22 @@ ${top}
               <span class="slide__goal-num" data-edit-text>③</span>
               <p class="slide__goal-text" data-edit-text>ゴール 3</p>
             </li>
+          </ol>
+        </div>
+${bot}
+${footer}
+      </section>`;
+  }
+  if (type === "agenda") {
+    return `<section class="slide slide--agenda" data-type="agenda" aria-hidden="true">
+${top}
+        <div class="slide__body">
+          <div class="slide__hero">
+            <p class="slide__hero-label" data-edit-id="${s}-label" data-edit-text>TODAY'S AGENDA</p>
+            <h2 class="slide__hero-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
+          </div>
+          <ol class="slide__timeline">
+${buildAgendaTimelineHtml(s)}
           </ol>
         </div>
 ${bot}

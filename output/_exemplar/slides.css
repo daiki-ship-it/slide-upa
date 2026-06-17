@@ -108,14 +108,12 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ① 表紙 ⑤ 章 */
-.slide--title,
-.slide--chapter {
+/* ① 表紙 */
+.slide--title {
   background: var(--slide-title-bg);
 }
 
-.slide--title .slide__watermark,
-.slide--chapter .slide__watermark {
+.slide--title .slide__watermark {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -129,8 +127,7 @@ body {
   user-select: none;
 }
 
-.slide--title .slide__body,
-.slide--chapter .slide__body {
+.slide--title .slide__body {
   position: relative;
   z-index: 1;
   align-items: center;
@@ -139,14 +136,12 @@ body {
   gap: 1.25rem;
 }
 
-.slide--title .slide__bar,
-.slide--chapter .slide__bar {
+.slide--title .slide__bar {
   position: relative;
   z-index: 1;
 }
 
-.slide--title .slide__main-title,
-.slide--chapter .slide__main-title {
+.slide--title .slide__main-title {
   margin: 0;
   font-size: clamp(1.75rem, 3.2cqw, 2.5rem);
   font-weight: 700;
@@ -158,8 +153,7 @@ body {
     0 2px 4px rgba(255, 255, 255, 0.75);
 }
 
-.slide--title .slide__subtitle,
-.slide--chapter .slide__subtitle {
+.slide--title .slide__subtitle {
   margin: 0;
   font-size: clamp(1rem, 1.6cqw, 1.25rem);
   font-weight: 500;
@@ -169,12 +163,16 @@ body {
     0 0 8px rgba(255, 255, 255, 0.85);
 }
 
-/* ⑥ ゴール（案D：章スライド風ヘッダー） */
-.slide--goal .slide__body {
+/* ⑤ 章 ⑥ ゴール ⑦ アジェンダ 共通ヒーロー */
+.slide--chapter .slide__body,
+.slide--goal .slide__body,
+.slide--agenda .slide__body {
   padding-top: 0;
 }
 
-.slide--goal .slide__hero {
+.slide--chapter .slide__hero,
+.slide--goal .slide__hero,
+.slide--agenda .slide__hero {
   position: relative;
   flex-shrink: 0;
   margin: 0 -3rem;
@@ -182,6 +180,11 @@ body {
   background: var(--slide-title-bg);
   border-bottom: 2px solid var(--slide-border);
   overflow: hidden;
+}
+
+.slide--chapter .slide__hero,
+.slide--agenda .slide__hero {
+  padding: 1.65rem 3rem 1.5rem;
 }
 
 .slide--goal .slide__hero-watermark {
@@ -198,7 +201,9 @@ body {
   user-select: none;
 }
 
-.slide--goal .slide__hero-label {
+.slide--chapter .slide__hero-label,
+.slide--goal .slide__hero-label,
+.slide--agenda .slide__hero-label {
   position: relative;
   z-index: 1;
   margin: 0 0 0.35rem;
@@ -208,7 +213,15 @@ body {
   color: var(--slide-accent);
 }
 
-.slide--goal .slide__hero-title {
+.slide--chapter .slide__hero-label,
+.slide--agenda .slide__hero-label {
+  margin-bottom: 0.3rem;
+  font-size: 0.8125rem;
+}
+
+.slide--chapter .slide__hero-title,
+.slide--goal .slide__hero-title,
+.slide--agenda .slide__hero-title {
   position: relative;
   z-index: 1;
   margin: 0;
@@ -216,6 +229,11 @@ body {
   font-weight: 700;
   line-height: 1.35;
   color: var(--slide-title-heading);
+}
+
+.slide--chapter .slide__hero-title,
+.slide--agenda .slide__hero-title {
+  font-size: clamp(1.45rem, 2.5cqw, 1.9rem);
 }
 
 .slide--goal .slide__goals {
@@ -253,6 +271,85 @@ body {
   margin: 0.35rem 0 0;
   font-size: clamp(1.08rem, 1.9cqw, 1.42rem);
   line-height: 1.55;
+  color: var(--slide-text);
+}
+
+/* ⑤ 章 ⑦ アジェンダ 共通タイムライン（案D） */
+.slide--agenda .slide__timeline,
+.slide--chapter .slide__timeline {
+  --agenda-line: hsl(188, 45%, 78%);
+  margin: 0;
+  padding: 1.75rem 0 0 3.25rem;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+}
+
+.slide--agenda .slide__agenda-item,
+.slide--chapter .slide__agenda-item {
+  position: relative;
+  padding: 1rem 0 1rem 1.5rem;
+}
+
+.slide--agenda .slide__agenda-item::before,
+.slide--chapter .slide__agenda-item::before {
+  content: "";
+  position: absolute;
+  left: -2.125rem;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--agenda-line);
+}
+
+.slide--agenda .slide__agenda-item:first-child::before,
+.slide--chapter .slide__agenda-item:first-child::before {
+  top: 50%;
+}
+
+.slide--agenda .slide__agenda-item:last-child::before,
+.slide--chapter .slide__agenda-item:last-child::before {
+  bottom: 50%;
+}
+
+.slide--agenda .slide__timeline-dot,
+.slide--chapter .slide__timeline-dot {
+  position: absolute;
+  left: -2.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  border: 3px solid var(--brand-primary);
+  background: var(--surface-bg);
+  box-sizing: border-box;
+}
+
+.slide--agenda .slide__timeline-dot {
+  background: var(--brand-primary);
+}
+
+.slide--chapter .slide__agenda-item--current .slide__timeline-dot {
+  background: var(--brand-primary);
+}
+
+.slide--agenda .slide__agenda-label,
+.slide--chapter .slide__agenda-label {
+  display: block;
+  font-size: clamp(1.05rem, 1.85cqw, 1.35rem);
+  font-weight: 700;
+  color: var(--slide-accent);
+  margin-bottom: 0.2rem;
+}
+
+.slide--agenda .slide__agenda-text,
+.slide--chapter .slide__agenda-text {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.85cqw, 1.35rem);
+  line-height: 1.5;
   color: var(--slide-text);
 }
 
