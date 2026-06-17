@@ -16,6 +16,26 @@
       el.style.transform = x || y ? `translate(${x}px, ${y}px)` : "";
       if (x || y) el.dataset.edited = "1";
     }
+    if (data.editWidth != null) {
+      const w = Number(data.editWidth);
+      if (w > 0) {
+        el.style.width = `${w}px`;
+        el.style.maxWidth = `${w}px`;
+        el.dataset.editWidth = String(w);
+        el.classList.add("has-edit-size");
+        el.dataset.edited = "1";
+      }
+    }
+    if (data.editHeight != null) {
+      const h = Number(data.editHeight);
+      if (h > 0) {
+        el.style.height = `${h}px`;
+        el.style.minHeight = `${h}px`;
+        el.dataset.editHeight = String(h);
+        el.classList.add("has-edit-size");
+        el.dataset.edited = "1";
+      }
+    }
     if (data.group) {
       el.dataset.editGroup = data.group;
       el.classList.add("is-edit-grouped");

@@ -1,6 +1,7 @@
 /**
  * slide-upa スライド編集（studio 埋め込み専用）
  * - クリックで選択、ドラッグで移動、ダブルクリックでテキスト編集
+ * - 選択中のテキストボックスはハンドルでサイズ調整（overrides に保存）
  * - 位置は transform のみ（flex レイアウトを崩さない）
  * - data-edit-char 要素クリックでキャラクターピッカーを開く
  * - ④ 画像スライドで「枠を追加」「×削除」ボタンを表示
@@ -13,7 +14,11 @@
   let slideIndex = 0;
   const selected = new Set();
   let dragState = null;
+  let resizeState = null;
   let pendingVisualSlot = null;
+
+  const RESIZE_DIRS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+  const RESIZE_MIN = 48;
 
   // ハンドラ種別ごとに WeakSet を分ける（同じ要素が複数のループで処理されても二重バインドしない）
   const boundId = new WeakSet();     // [data-edit-id] 用（ドラッグ・テキスト編集）
@@ -57,6 +62,7 @@
   function clearSelection() {
     selected.forEach((id) => byId(id)?.classList.remove("is-edit-selected"));
     selected.clear();
+    updateResizeHandles();
     postSelection();
   }
 
@@ -70,6 +76,7 @@
   }
 
   function postSelection() {
+    updateResizeHandles();
     postToParent({ type: "selection", ids: [...selected], slideIndex });
     reportSpacingInfo();
   }
@@ -102,7 +109,6 @@
     el.style.position = "";
     el.style.left = "";
     el.style.top = "";
-    el.style.width = "";
     el.style.margin = "";
     el.style.zIndex = "";
     el.dataset.translateX = String(Math.round(x * 10) / 10);
@@ -111,14 +117,220 @@
     if (x || y) el.dataset.edited = "1";
   }
 
+  function readSize(el) {
+    const w = el.dataset.editWidth;
+    const h = el.dataset.editHeight;
+    return {
+      width: w != null ? Number.parseFloat(w) || null : null,
+      height: h != null ? Number.parseFloat(h) || null : null,
+    };
+  }
+
+  function writeSize(el, width, height) {
+    if (width != null && width >= RESIZE_MIN) {
+      const w = Math.round(width * 10) / 10;
+      el.style.width = `${w}px`;
+      el.style.maxWidth = `${w}px`;
+      el.dataset.editWidth = String(w);
+    }
+    if (height != null && height >= RESIZE_MIN) {
+      const h = Math.round(height * 10) / 10;
+      el.style.height = `${h}px`;
+      el.style.minHeight = `${h}px`;
+      el.dataset.editHeight = String(h);
+    }
+    if (width != null || height != null) {
+      el.classList.add("has-edit-size");
+      el.dataset.edited = "1";
+    }
+  }
+
+  function isResizable(el) {
+    if (!el || el.hasAttribute("data-edit-visual")) return false;
+    if (el.hasAttribute("data-edit-char") && el.tagName === "IMG") return false;
+    return true;
+  }
+
+  function getElementCanvasRect(el) {
+    const body = el?.closest(".slide__body");
+    if (!body) return null;
+    const scale = getCanvasScale();
+    const elRect = el.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    return {
+      left: (elRect.left - bodyRect.left) / scale,
+      top: (elRect.top - bodyRect.top) / scale,
+      width: elRect.width / scale,
+      height: elRect.height / scale,
+    };
+  }
+
+  function getResizeLayer() {
+    const body = getActiveSlide()?.querySelector(".slide__body");
+    if (!body) return null;
+    let layer = body.querySelector(".slide-edit-resize-layer");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.className = "slide-edit-resize-layer";
+      layer.setAttribute("aria-hidden", "true");
+      const frame = document.createElement("div");
+      frame.className = "slide-edit-selection-frame";
+      layer.appendChild(frame);
+      RESIZE_DIRS.forEach((dir) => {
+        const handle = document.createElement("div");
+        handle.className = `slide-edit-resize-handle slide-edit-resize-handle--${dir}`;
+        handle.dataset.dir = dir;
+        handle.addEventListener("pointerdown", onResizePointerDown);
+        layer.appendChild(handle);
+      });
+      body.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function positionResizeHandles(el, layer = getResizeLayer()) {
+    if (!el || !layer) return;
+    const rect = getElementCanvasRect(el);
+    if (!rect) return;
+    const { left, top, width: w, height: h } = rect;
+    const frame = layer.querySelector(".slide-edit-selection-frame");
+    if (frame) {
+      frame.style.left = `${left}px`;
+      frame.style.top = `${top}px`;
+      frame.style.width = `${w}px`;
+      frame.style.height = `${h}px`;
+    }
+    const points = {
+      nw: [left, top],
+      n: [left + w / 2, top],
+      ne: [left + w, top],
+      e: [left + w, top + h / 2],
+      se: [left + w, top + h],
+      s: [left + w / 2, top + h],
+      sw: [left, top + h],
+      w: [left, top + h / 2],
+    };
+    layer.querySelectorAll(".slide-edit-resize-handle").forEach((handle) => {
+      const [x, y] = points[handle.dataset.dir] ?? [0, 0];
+      handle.style.left = `${x}px`;
+      handle.style.top = `${y}px`;
+    });
+  }
+
+  function updateResizeHandles() {
+    const layer = getResizeLayer();
+    document.querySelectorAll(".is-resize-target").forEach((node) => node.classList.remove("is-resize-target"));
+    if (!layer) return;
+    if (selected.size !== 1) {
+      layer.hidden = true;
+      return;
+    }
+    const el = byId([...selected][0]);
+    if (!el || !isResizable(el)) {
+      layer.hidden = true;
+      return;
+    }
+    el.classList.add("is-resize-target");
+    layer.hidden = false;
+    positionResizeHandles(el, layer);
+  }
+
+  function endResize() {
+    if (!resizeState) return;
+    window.removeEventListener("pointermove", resizeState.onMove);
+    window.removeEventListener("pointerup", resizeState.onUp);
+    window.removeEventListener("pointercancel", resizeState.onUp);
+    try {
+      resizeState.handle.releasePointerCapture(resizeState.pointerId);
+    } catch {
+      /* ignore */
+    }
+    resizeState = null;
+    updateResizeHandles();
+  }
+
+  function onResizePointerDown(e) {
+    if (selected.size !== 1) return;
+    const el = byId([...selected][0]);
+    if (!el || !isResizable(el)) return;
+    if (dragState) endDrag();
+    e.preventDefault();
+    e.stopPropagation();
+
+    const saved = readSize(el);
+    const startW = saved.width ?? el.offsetWidth;
+    const startH = saved.height ?? el.offsetHeight;
+    const { x: startTx, y: startTy } = readTranslate(el);
+
+    function onMove(ev) {
+      if (ev.pointerId !== resizeState?.pointerId) return;
+      const dx = screenToCanvas(ev.clientX - resizeState.startX);
+      const dy = screenToCanvas(ev.clientY - resizeState.startY);
+      const dir = resizeState.dir;
+      let w = resizeState.startW;
+      let h = resizeState.startH;
+      let tx = resizeState.startTx;
+      let ty = resizeState.startTy;
+
+      if (dir.includes("e")) w = Math.max(RESIZE_MIN, resizeState.startW + dx);
+      if (dir.includes("w")) {
+        w = Math.max(RESIZE_MIN, resizeState.startW - dx);
+        tx = resizeState.startTx + (resizeState.startW - w);
+      }
+      if (dir.includes("s")) h = Math.max(RESIZE_MIN, resizeState.startH + dy);
+      if (dir.includes("n")) {
+        h = Math.max(RESIZE_MIN, resizeState.startH - dy);
+        ty = resizeState.startTy + (resizeState.startH - h);
+      }
+
+      writeSize(el, w, h);
+      writeTranslate(el, tx, ty);
+      positionResizeHandles(el);
+    }
+
+    function onUp(ev) {
+      if (ev.pointerId !== resizeState?.pointerId) return;
+      markDirty();
+      endResize();
+    }
+
+    resizeState = {
+      el,
+      dir: e.currentTarget.dataset.dir,
+      handle: e.currentTarget,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW,
+      startH,
+      startTx,
+      startTy,
+      onMove,
+      onUp,
+    };
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  }
+
   function getElementState(el) {
     const { x, y } = readTranslate(el);
+    const { width, height } = readSize(el);
     const state = {
       translateX: x,
       translateY: y,
       html: el.innerHTML,
       group: el.dataset.editGroup ?? null,
     };
+    if (width != null) state.editWidth = width;
+    if (height != null) state.editHeight = height;
     if (el.hasAttribute("data-edit-visual")) {
       const img = el.querySelector(".slide__visual-img");
       if (img) state.imageSrc = img.getAttribute("src");
@@ -784,8 +996,10 @@
   }
 
   function onPointerDown(e) {
+    if (e.target.closest(".slide-edit-resize-handle")) return;
     const el = e.target.closest("[data-edit-id]");
     if (!el || el.contentEditable === "true" || el.hasAttribute("data-edit-visual") || el.hasAttribute("data-edit-char")) return;
+    if (resizeState) endResize();
     if (dragState) endDrag();
     e.stopPropagation();
     e.preventDefault();
@@ -837,6 +1051,7 @@
         lastDx = dx;
         lastDy = dy;
       }
+      if (selected.size === 1) positionResizeHandles(el);
     }
 
     function onUp(ev) {
@@ -852,6 +1067,7 @@
         dragState.bases.forEach(({ node, x, y }) => writeTranslate(node, x, y));
       }
       endDrag();
+      updateResizeHandles();
     }
 
     dragState = {
@@ -950,6 +1166,10 @@
         el.contentEditable = "false";
       });
     }
+  });
+
+  window.addEventListener("resize", () => {
+    if (selected.size === 1) updateResizeHandles();
   });
 
   const style = document.createElement("link");
