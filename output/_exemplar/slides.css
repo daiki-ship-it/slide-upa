@@ -336,6 +336,24 @@ body {
   background: var(--brand-primary);
 }
 
+.slide--chapter .slide__agenda-item:not(.slide__agenda-item--current) .slide__agenda-label {
+  font-weight: 500;
+}
+
+.slide--chapter .slide__agenda-item--current .slide__agenda-label {
+  font-weight: 700;
+}
+
+.slide--chapter .slide__agenda-item--current .slide__agenda-label strong {
+  font-weight: 700;
+}
+
+.slide--chapter .slide__agenda-item--current .slide__agenda-text,
+.slide--chapter .slide__agenda-item--current .slide__agenda-text strong {
+  color: var(--slide-text);
+  font-weight: 700;
+}
+
 .slide--agenda .slide__agenda-label,
 .slide--chapter .slide__agenda-label {
   display: block;
