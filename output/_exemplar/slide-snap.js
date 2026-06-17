@@ -12,23 +12,32 @@
   /** @typedef {{ axis:"x"|"y", position:number, activeEdge:string, targetEdge:string, targetId:string, targetEl?: HTMLElement|null }} AlignmentPair */
   /** @typedef {{ axis:"x"|"y", position:number, pairs: AlignmentPair[] }} AlignmentGuide */
 
+  function getCanvasScale() {
+    const scaler = document.querySelector(".slide-scaler");
+    if (!scaler) return 1;
+    const transform = getComputedStyle(scaler).transform;
+    if (!transform || transform === "none") return 1;
+    return new DOMMatrix(transform).a || 1;
+  }
+
   /**
    * @param {DOMRect} rect
    * @param {DOMRect} origin
+   * @param {number} [scale]
    * @returns {SnapBox}
    */
-  function rectToBox(rect, origin) {
-    const left = rect.left - origin.left;
-    const top = rect.top - origin.top;
-    const right = rect.right - origin.left;
-    const bottom = rect.bottom - origin.top;
+  function rectToBox(rect, origin, scale = 1) {
+    const left = (rect.left - origin.left) / scale;
+    const top = (rect.top - origin.top) / scale;
+    const right = (rect.right - origin.left) / scale;
+    const bottom = (rect.bottom - origin.top) / scale;
     return {
       left,
       top,
       right,
       bottom,
-      width: rect.width,
-      height: rect.height,
+      width: rect.width / scale,
+      height: rect.height / scale,
       centerX: (left + right) / 2,
       centerY: (top + bottom) / 2,
     };
@@ -190,19 +199,20 @@
   /**
    * ドラッグ中のスナップ文脈を DOM から構築
    * @param {HTMLElement[]} activeNodes
-   * @param {HTMLElement} slideBody
+   * @param {HTMLElement} slideEl `.slide` 要素（1280×720 のスライド全体）
    */
-  function getSnapContext(activeNodes, slideBody) {
-    const bodyRect = slideBody.getBoundingClientRect();
-    const canvasBox = rectToBox(bodyRect, bodyRect);
+  function getSnapContext(activeNodes, slideEl) {
+    const scale = getCanvasScale();
+    const slideRect = slideEl.getBoundingClientRect();
+    const canvasBox = rectToBox(slideRect, slideRect, scale);
     const activeSet = new Set(activeNodes);
 
     /** @type {SnapTarget[]} */
     const staticTargets = [];
-    slideBody.querySelectorAll("[data-edit-id]").forEach((el) => {
+    slideEl.querySelectorAll("[data-edit-id]").forEach((el) => {
       if (!activeSet.has(el)) {
         staticTargets.push({
-          box: rectToBox(el.getBoundingClientRect(), bodyRect),
+          box: rectToBox(el.getBoundingClientRect(), slideRect, scale),
           el,
           id: el.dataset.editId ?? "",
         });
@@ -210,15 +220,15 @@
     });
 
     const activeBox = mergeBoxes(
-      activeNodes.map((node) => rectToBox(node.getBoundingClientRect(), bodyRect))
+      activeNodes.map((node) => rectToBox(node.getBoundingClientRect(), slideRect, scale))
     );
 
     return {
-      bodyRect,
+      slideRect,
       canvasBox,
       staticTargets,
       activeBox,
-      extent: { width: bodyRect.width, height: bodyRect.height },
+      extent: { width: canvasBox.width, height: canvasBox.height },
     };
   }
 
@@ -226,8 +236,9 @@
    * @param {HTMLElement} container
    * @param {{ guides: AlignmentGuide[], activeBox: SnapBox|null }} result
    * @param {SnapTarget[]} staticTargets
+   * @param {{ width: number, height: number }|null} [extent]
    */
-  function renderSnapGuides(container, result, staticTargets) {
+  function renderSnapGuides(container, result, staticTargets, extent) {
     clearSnapGuides(container);
     if (!result.guides.length || !result.activeBox) return;
 
@@ -237,17 +248,31 @@
     container.appendChild(layer);
 
     for (const guide of result.guides) {
-      const seg = guideSegment(guide, result.activeBox, staticTargets);
+      const isCanvasCenter = guide.pairs.some((p) => p.targetId === "canvas");
       const line = document.createElement("div");
       line.className = `slide-edit-snap-guide slide-edit-snap-guide--${guide.axis}`;
-      if (guide.axis === "x") {
-        line.style.left = `${guide.position}px`;
-        line.style.top = `${seg.top}px`;
-        line.style.height = `${Math.max(seg.bottom - seg.top, 1)}px`;
+      if (isCanvasCenter) {
+        line.classList.add(`is-canvas-center--${guide.axis}`);
+        if (guide.axis === "x" && extent) {
+          line.style.left = `${guide.position}px`;
+          line.style.top = "0";
+          line.style.height = `${extent.height}px`;
+        } else if (guide.axis === "y" && extent) {
+          line.style.top = `${guide.position}px`;
+          line.style.left = "0";
+          line.style.width = `${extent.width}px`;
+        }
       } else {
-        line.style.top = `${guide.position}px`;
-        line.style.left = `${seg.left}px`;
-        line.style.width = `${Math.max(seg.right - seg.left, 1)}px`;
+        const seg = guideSegment(guide, result.activeBox, staticTargets);
+        if (guide.axis === "x") {
+          line.style.left = `${guide.position}px`;
+          line.style.top = `${seg.top}px`;
+          line.style.height = `${Math.max(seg.bottom - seg.top, 1)}px`;
+        } else {
+          line.style.top = `${guide.position}px`;
+          line.style.left = `${seg.left}px`;
+          line.style.width = `${Math.max(seg.right - seg.left, 1)}px`;
+        }
       }
       layer.appendChild(line);
     }

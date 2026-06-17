@@ -5,16 +5,22 @@
 (function (global) {
   let overrides = { slides: {} };
 
+  function applyTranslate(el, x, y) {
+    el.dataset.translateX = String(Math.round(x * 10) / 10);
+    el.dataset.translateY = String(Math.round(y * 10) / 10);
+    if (el.classList.contains("slide__watermark")) {
+      el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    } else {
+      el.style.transform = x || y ? `translate(${x}px, ${y}px)` : "";
+    }
+    if (x || y) el.dataset.edited = "1";
+  }
+
   function applyElementState(el, data) {
     if (!data) return;
     if (data.html != null) el.innerHTML = data.html;
     if (data.translateX != null || data.translateY != null) {
-      const x = data.translateX ?? 0;
-      const y = data.translateY ?? 0;
-      el.dataset.translateX = String(Math.round(x * 10) / 10);
-      el.dataset.translateY = String(Math.round(y * 10) / 10);
-      el.style.transform = x || y ? `translate(${x}px, ${y}px)` : "";
-      if (x || y) el.dataset.edited = "1";
+      applyTranslate(el, data.translateX ?? 0, data.translateY ?? 0);
     }
     if (data.editWidth != null) {
       const w = Number(data.editWidth);

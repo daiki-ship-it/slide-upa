@@ -24,6 +24,7 @@
   const boundId = new WeakSet();     // [data-edit-id] 用（ドラッグ・テキスト編集）
   const boundVisual = new WeakSet(); // [data-edit-visual] 用（画像アップロード）
   const boundChar = new WeakSet();   // [data-edit-char] 用（キャラ選択）
+  const suppressNextClick = new WeakSet(); // ドラッグ直後の click を抑止
 
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -105,6 +106,13 @@
     return { x: 0, y: 0 };
   }
 
+  function formatTransform(el, x, y) {
+    if (el.classList.contains("slide__watermark")) {
+      return `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    }
+    return x || y ? `translate(${x}px, ${y}px)` : "";
+  }
+
   function writeTranslate(el, x, y) {
     el.style.position = "";
     el.style.left = "";
@@ -113,7 +121,7 @@
     el.style.zIndex = "";
     el.dataset.translateX = String(Math.round(x * 10) / 10);
     el.dataset.translateY = String(Math.round(y * 10) / 10);
-    el.style.transform = x || y ? `translate(${x}px, ${y}px)` : "";
+    el.style.transform = formatTransform(el, x, y);
     if (x || y) el.dataset.edited = "1";
   }
 
@@ -409,8 +417,8 @@
   }
 
   function clearSnapGuidesForActiveSlide() {
-    getActiveSlide()?.querySelector(".slide__body") &&
-      window.SlideUpaSnap?.clearSnapGuides(getActiveSlide().querySelector(".slide__body"));
+    const slide = getActiveSlide();
+    if (slide) window.SlideUpaSnap?.clearSnapGuides(slide);
   }
 
   function showGapGuides(els, gaps) {
@@ -590,6 +598,12 @@
   function onVisualSlotClick(e) {
     const slot = e.target.closest("[data-edit-visual]");
     if (!slot) return;
+    if (suppressNextClick.has(slot)) {
+      suppressNextClick.delete(slot);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     // 削除ボタンのクリックは除外
     if (e.target.closest(".slide__visual-remove")) return;
     e.preventDefault();
@@ -809,9 +823,24 @@
   }
 
   function onCharClick(e) {
+    const el = e.currentTarget;
+    if (suppressNextClick.has(el)) {
+      suppressNextClick.delete(el);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
-    openCharPicker(e.currentTarget);
+    openCharPicker(el);
+  }
+
+  function getSlideBodyFor(el) {
+    return el.closest(".slide__body") ?? el.closest(".slide")?.querySelector(".slide__body") ?? null;
+  }
+
+  function getSlideFor(el) {
+    return el.closest(".slide");
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -984,8 +1013,8 @@
     window.removeEventListener("pointermove", dragState.onMove);
     window.removeEventListener("pointerup", dragState.onUp);
     window.removeEventListener("pointercancel", dragState.onUp);
-    if (dragState.slideBody) {
-      window.SlideUpaSnap?.clearSnapGuides(dragState.slideBody);
+    if (dragState.slideRoot) {
+      window.SlideUpaSnap?.clearSnapGuides(dragState.slideRoot);
     }
     try {
       dragState.el.releasePointerCapture(dragState.pointerId);
@@ -998,7 +1027,7 @@
   function onPointerDown(e) {
     if (e.target.closest(".slide-edit-resize-handle")) return;
     const el = e.target.closest("[data-edit-id]");
-    if (!el || el.contentEditable === "true" || el.hasAttribute("data-edit-visual") || el.hasAttribute("data-edit-char")) return;
+    if (!el || el.contentEditable === "true") return;
     if (resizeState) endResize();
     if (dragState) endDrag();
     e.stopPropagation();
@@ -1007,32 +1036,32 @@
 
     const nodes = dragTargetsFor(el, e.shiftKey);
     const bases = nodes.map((node) => ({ node, ...readTranslate(node) }));
-    const slideBody = el.closest(".slide__body");
+    const slideRoot = getSlideFor(el);
     let moved = false;
     let lastDx = 0;
     let lastDy = 0;
 
     function applyDrag(dx, dy) {
       dragState.bases.forEach(({ node, x, y }) => {
-        node.style.transform = `translate(${x + dx}px, ${y + dy}px)`;
+        node.style.transform = formatTransform(node, x + dx, y + dy);
         node.style.zIndex = "10";
       });
     }
 
     function onMove(ev) {
       if (ev.pointerId !== dragState?.pointerId) return;
-      let dx = ev.clientX - dragState.startX;
-      let dy = ev.clientY - dragState.startY;
+      let dx = screenToCanvas(ev.clientX - dragState.startX);
+      let dy = screenToCanvas(ev.clientY - dragState.startY);
       if (Math.abs(dx) < 3 && Math.abs(dy) < 3) {
-        window.SlideUpaSnap?.clearSnapGuides(slideBody);
+        window.SlideUpaSnap?.clearSnapGuides(slideRoot);
         return;
       }
       moved = true;
       applyDrag(dx, dy);
 
-      if (window.SlideUpaSnap && slideBody) {
+      if (window.SlideUpaSnap && slideRoot) {
         const activeNodes = dragState.bases.map((b) => b.node);
-        const ctx = SlideUpaSnap.getSnapContext(activeNodes, slideBody);
+        const ctx = SlideUpaSnap.getSnapContext(activeNodes, slideRoot);
         if (ctx.activeBox) {
           const snap = SlideUpaSnap.calculateSnap({
             activeBox: ctx.activeBox,
@@ -1042,7 +1071,7 @@
           lastDx = dx + snap.snapDx;
           lastDy = dy + snap.snapDy;
           applyDrag(lastDx, lastDy);
-          SlideUpaSnap.renderSnapGuides(slideBody, snap, ctx.staticTargets);
+          SlideUpaSnap.renderSnapGuides(slideRoot, snap, ctx.staticTargets, ctx.extent);
         } else {
           lastDx = dx;
           lastDy = dy;
@@ -1056,11 +1085,14 @@
 
     function onUp(ev) {
       if (ev.pointerId !== dragState?.pointerId) return;
-      window.SlideUpaSnap?.clearSnapGuides(slideBody);
+      window.SlideUpaSnap?.clearSnapGuides(slideRoot);
       if (moved) {
         dragState.bases.forEach(({ node, x, y }) => {
           writeTranslate(node, x + lastDx, y + lastDy);
         });
+        if (el.hasAttribute("data-edit-char") || el.hasAttribute("data-edit-visual")) {
+          suppressNextClick.add(el);
+        }
         removeSpacingGuides();
         markDirty();
       } else {
@@ -1072,7 +1104,7 @@
 
     dragState = {
       el,
-      slideBody,
+      slideRoot,
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
