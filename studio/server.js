@@ -103,7 +103,7 @@ function writeOverrides(id, data) {
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 
-const SLIDE_TYPE_LABELS = { title: "表紙", chapter: "章", bullets: "要点", quote: "一言", visual: "画像" };
+const SLIDE_TYPE_LABELS = { title: "表紙", chapter: "章", goal: "ゴール", bullets: "要点", quote: "一言", visual: "画像" };
 
 function escXml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -168,6 +168,44 @@ ${top}
         >
         <div class="slide__body">
           <h1 class="slide__main-title" data-edit-id="${s}-title" data-edit-text>${h}</h1>
+        </div>
+${bot}
+${footer}
+      </section>`;
+  }
+  if (type === "goal") {
+    const watermark = resolveCharVariant(iconSrc, "真顔", imagesDir);
+    return `<section class="slide slide--goal" data-type="goal" aria-hidden="true">
+${top}
+        <div class="slide__body">
+          <div class="slide__hero">
+            <img
+              class="slide__hero-watermark"
+              data-edit-id="${s}-watermark"
+              data-edit-char
+              src="${watermark}"
+              alt=""
+              width="140"
+              height="140"
+              aria-hidden="true"
+            >
+            <p class="slide__hero-label" data-edit-id="${s}-label" data-edit-text>TODAY'S GOALS</p>
+            <h2 class="slide__hero-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
+          </div>
+          <ol class="slide__goals">
+            <li class="slide__goal-item" data-edit-id="${s}-g0">
+              <span class="slide__goal-num" data-edit-text>①</span>
+              <p class="slide__goal-text" data-edit-text>ゴール 1</p>
+            </li>
+            <li class="slide__goal-item" data-edit-id="${s}-g1">
+              <span class="slide__goal-num" data-edit-text>②</span>
+              <p class="slide__goal-text" data-edit-text>ゴール 2</p>
+            </li>
+            <li class="slide__goal-item" data-edit-id="${s}-g2">
+              <span class="slide__goal-num" data-edit-text>③</span>
+              <p class="slide__goal-text" data-edit-text>ゴール 3</p>
+            </li>
+          </ol>
         </div>
 ${bot}
 ${footer}

@@ -1,5 +1,5 @@
 {
-  "title": "AIが毎朝タスク進捗を自動報告する仕組み",
+  "title": "slide-upa スライド型見本（6種）",
   "subtitle": "ウパ博士の伴走ミーティング",
   "audiencePath": "audience.html",
   "slides": [
@@ -7,35 +7,42 @@
       "index": 0,
       "type": "title",
       "typeLabel": "表紙",
-      "heading": "AIが毎朝タスク進捗を自動報告する仕組み",
+      "heading": "slide-upa スライド型見本（6種）",
       "script": ""
     },
     {
       "index": 1,
-      "type": "bullets",
-      "typeLabel": "要点",
-      "heading": "1-1. 今日のゴール",
-      "script": "まず今日のゴールです。\n\n- 毎朝の進捗報告を自動化する全体像を掴む\n- 自分の業務に置き換えるための4ステップを理解する\n- 次回までにタスク一覧を1つ用意する"
-    },
-    {
-      "index": 2,
-      "type": "bullets",
-      "typeLabel": "要点",
-      "heading": "あいうえお",
-      "script": "- ナナナんん\n- ナナナっっっd\n- ささっっd"
-    },
-    {
-      "index": 3,
-      "type": "quote",
-      "typeLabel": "一言",
-      "heading": "1-2. 一番覚えておくこと",
+      "type": "chapter",
+      "typeLabel": "章",
+      "heading": "第1章：型の説明",
       "script": ""
     },
     {
+      "index": 2,
+      "type": "goal",
+      "typeLabel": "ゴール",
+      "heading": "今日のゴール",
+      "script": "- **①**表紙・章・ゴール・要点・一言・画像の6型を確認する\n- **②**台本の書き方と生成ルールを理解する\n- **③**studio で編集・追加できることを知る"
+    },
+    {
+      "index": 3,
+      "type": "bullets",
+      "typeLabel": "要点",
+      "heading": "1-1. 要点リストの例",
+      "script": "- **箇条書き**がそのまま並ぶ型\n- 説明パートの基本\n- 段落だけの節は自動要約される"
+    },
+    {
       "index": 4,
+      "type": "quote",
+      "typeLabel": "一言",
+      "heading": "1-2. 一番覚えておくこと",
+      "script": "[quote: ポイントは「人が毎回書かなくていい」ことです]"
+    },
+    {
+      "index": 5,
       "type": "visual",
       "typeLabel": "画像",
-      "heading": "2-2. 全体の流れ",
+      "heading": "2-1. 全体の流れ",
       "script": ""
     }
   ]

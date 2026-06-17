@@ -928,6 +928,15 @@
     if (type === "title" || type === "chapter") {
       return { index, heading, script: "", textPatches };
     }
+    if (type === "goal") {
+      const items = [...slide.querySelectorAll(".slide__goal-item")].map((li) => {
+        const num = li.querySelector(".slide__goal-num")?.textContent?.trim() ?? "";
+        const textEl = li.querySelector(".slide__goal-text");
+        const textMd = textEl ? htmlToMarkdownInline(textEl.innerHTML) : "";
+        return num ? `- **${num}**${textMd}` : `- ${textMd}`;
+      });
+      return { index, heading, script: items.join("\n"), textPatches };
+    }
     if (type === "visual") {
       return { index, heading, skipBody: true, textPatches };
     }

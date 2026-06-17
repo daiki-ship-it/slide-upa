@@ -99,7 +99,8 @@
 }
 
 .slide--title .slide__watermark[data-edit-id],
-.slide--chapter .slide__watermark[data-edit-id] {
+.slide--chapter .slide__watermark[data-edit-id],
+.slide--goal .slide__hero-watermark[data-edit-id] {
   pointer-events: auto;
 }
 
