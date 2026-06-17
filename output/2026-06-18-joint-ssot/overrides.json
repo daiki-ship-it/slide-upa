@@ -1,0 +1,58 @@
+{
+  "slides": {
+    "0": {
+      "elements": {
+        "s0-title": {
+          "translateX": 14.9,
+          "translateY": -5,
+          "html": "コンテキスト管理・フォルダ整理術",
+          "group": null,
+          "editWidth": 959.7,
+          "editHeight": 59.5
+        }
+      }
+    },
+    "1": {
+      "elements": {}
+    },
+    "2": {
+      "elements": {}
+    },
+    "3": {
+      "elements": {}
+    },
+    "4": {
+      "elements": {}
+    },
+    "5": {
+      "elements": {},
+      "visualSlotCount": 1
+    },
+    "6": {
+      "elements": {}
+    },
+    "7": {
+      "elements": {},
+      "visualSlotCount": 1
+    },
+    "8": {
+      "elements": {},
+      "visualSlotCount": 1
+    },
+    "9": {
+      "elements": {}
+    },
+    "10": {
+      "elements": {}
+    },
+    "11": {
+      "elements": {}
+    },
+    "12": {
+      "elements": {}
+    },
+    "13": {
+      "elements": {}
+    }
+  }
+}
