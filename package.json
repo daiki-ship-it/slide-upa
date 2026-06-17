@@ -1,6 +1,7 @@
 {
   "name": "slide-upa",
   "private": true,
+  "type": "module",
   "scripts": {
     "start": "npm start --prefix studio",
     "studio": "npm start --prefix studio"

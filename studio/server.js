@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { deployProject, readDeployRecord } from "./deploy.js";
 import { linkAllContextScripts, writeCanonicalScript } from "../lib/context-script.js";
+import { regenerateProject } from "../lib/generate-from-script.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -946,6 +947,32 @@ const server = http.createServer((req, res) => {
       .catch(() => {
         sendJson(res, 400, { error: "Invalid JSON" });
       });
+    return;
+  }
+
+  const regenerateMatch = url.pathname.match(/^\/api\/projects\/([^/]+)\/regenerate$/);
+  if (regenerateMatch && req.method === "POST") {
+    const id = decodeURIComponent(regenerateMatch[1]);
+    readBody(req)
+      .then((body) => {
+        const dir = projectDir(id);
+        if (!dir) {
+          sendJson(res, 404, { error: "Project not found" });
+          return;
+        }
+        const preserveOverrides = body?.preserveOverrides !== false;
+        try {
+          const result = regenerateProject(dir, { preserveOverrides });
+          sendJson(res, 200, result);
+        } catch (err) {
+          if (err.code === "VALIDATION") {
+            sendJson(res, 422, { errors: err.errors, warnings: err.warnings ?? [] });
+            return;
+          }
+          sendJson(res, 500, { error: err.message ?? "再生成に失敗しました" });
+        }
+      })
+      .catch(() => sendJson(res, 400, { error: "Invalid JSON" }));
     return;
   }
 

@@ -11,65 +11,6 @@
           "editHeight": 59.5
         }
       }
-    },
-    "1": {
-      "elements": {
-        "s1-title": {
-          "translateX": 0,
-          "translateY": 6,
-          "group": null,
-          "editWidth": 1270.8,
-          "editHeight": 65.3
-        }
-      }
-    },
-    "2": {
-      "elements": {}
-    },
-    "3": {
-      "elements": {}
-    },
-    "4": {
-      "elements": {}
-    },
-    "5": {
-      "elements": {}
-    },
-    "6": {
-      "elements": {},
-      "visualSlotCount": 1
-    },
-    "7": {
-      "elements": {}
-    },
-    "8": {
-      "elements": {},
-      "visualSlotCount": 1
-    },
-    "9": {
-      "elements": {}
-    },
-    "10": {
-      "elements": {},
-      "visualSlotCount": 1
-    },
-    "11": {
-      "elements": {}
-    },
-    "12": {
-      "elements": {}
-    },
-    "13": {
-      "elements": {}
-    },
-    "14": {
-      "elements": {}
-    },
-    "15": {
-      "elements": {}
-    },
-    "16": {
-      "elements": {}
     }
   }
 }

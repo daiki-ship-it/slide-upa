@@ -127,10 +127,16 @@
       <aside class="pane pane--script" aria-label="台本">
         <div class="pane__head">
           <span class="pane__label">台本</span>
-          <button type="button" class="btn btn--sm btn--primary script-save-btn is-hidden" id="btn-save-script" title="台本を保存">
-            <i data-lucide="save" aria-hidden="true"></i>
-            保存
-          </button>
+          <div class="script-head-actions">
+            <button type="button" class="btn btn--sm" id="btn-regenerate" title="台本からスライドを再生成">
+              <i data-lucide="refresh-cw" aria-hidden="true"></i>
+              再生成
+            </button>
+            <button type="button" class="btn btn--sm btn--primary script-save-btn is-hidden" id="btn-save-script" title="台本を保存">
+              <i data-lucide="save" aria-hidden="true"></i>
+              保存
+            </button>
+          </div>
         </div>
         <div class="script-drift-banner is-hidden" id="script-drift-banner" role="status" aria-live="polite">
           <i data-lucide="alert-triangle" aria-hidden="true"></i>
@@ -141,7 +147,7 @@
         </div>
         <div class="script-panel__hint">
           <i data-lucide="info" aria-hidden="true"></i>
-          台本はここで直接編集・保存できます。レイアウト変更は中央プレビューで。スライドの追加は「スライド」欄の＋ボタンから。削除はファイルを直し再生成してください。
+          台本はここで直接編集・保存できます。レイアウト変更は中央プレビューで。章の追加や削除など構造を変えたときは「再生成」ボタンを押してください。スライドの追加は「スライド」欄の＋ボタンから。
         </div>
       </aside>
     </div>
@@ -213,6 +219,40 @@
           </button>
         </li>
       </ul>
+    </div>
+  </dialog>
+
+  <dialog class="slide-picker regenerate-dialog" id="regenerate-dialog" aria-label="スライド再生成">
+    <div class="slide-picker__inner">
+      <header class="slide-picker__head">
+        <div>
+          <h2 class="slide-picker__title">スライドを再生成</h2>
+          <p class="slide-picker__sub">script.md から deck.json と audience.html を作り直します。</p>
+        </div>
+        <button type="button" class="btn btn--ghost btn--icon" id="btn-regenerate-close" aria-label="閉じる">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+      </header>
+      <div class="regenerate-dialog__body">
+        <p class="regenerate-dialog__lead">手直し（位置・サイズ・画像差し替え）をどうしますか？</p>
+        <fieldset class="regenerate-dialog__options">
+          <label class="regenerate-dialog__option">
+            <input type="radio" name="overrides-policy" value="preserve" checked>
+            <span>手直しを保持する（推奨）</span>
+          </label>
+          <label class="regenerate-dialog__option">
+            <input type="radio" name="overrides-policy" value="reset">
+            <span>手直しをリセットする</span>
+          </label>
+        </fieldset>
+      </div>
+      <footer class="regenerate-dialog__foot">
+        <button type="button" class="btn btn--ghost" id="btn-regenerate-cancel">キャンセル</button>
+        <button type="button" class="btn btn--primary" id="btn-regenerate-run">
+          <i data-lucide="refresh-cw" aria-hidden="true"></i>
+          再生成する
+        </button>
+      </footer>
     </div>
   </dialog>
 

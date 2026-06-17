@@ -22,6 +22,11 @@ const els = {
   btnSaveEdit: document.getElementById("btn-save-edit"),
   btnDeploy: document.getElementById("btn-deploy"),
   btnSaveScript: document.getElementById("btn-save-script"),
+  btnRegenerate: document.getElementById("btn-regenerate"),
+  regenerateDialog: document.getElementById("regenerate-dialog"),
+  btnRegenerateClose: document.getElementById("btn-regenerate-close"),
+  btnRegenerateCancel: document.getElementById("btn-regenerate-cancel"),
+  btnRegenerateRun: document.getElementById("btn-regenerate-run"),
   spacingInput: document.getElementById("spacing-input"),
   btnSpacingDec: document.getElementById("btn-spacing-dec"),
   btnSpacingInc: document.getElementById("btn-spacing-inc"),
@@ -325,6 +330,63 @@ async function saveScriptSlide() {
   els.btnSaveScript.classList.add("is-hidden");
 }
 
+function openRegenerateDialog() {
+  els.regenerateDialog?.showModal();
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeRegenerateDialog() {
+  els.regenerateDialog?.close();
+}
+
+async function runRegenerate() {
+  if (!state.projectId) return;
+  closeRegenerateDialog();
+
+  if (state.scriptDirty) {
+    await saveScriptSlide().catch((err) => {
+      alert(err.message);
+      throw err;
+    });
+  }
+
+  const policy = document.querySelector('input[name="overrides-policy"]:checked')?.value ?? "preserve";
+  const preserveOverrides = policy === "preserve";
+
+  els.btnRegenerate.disabled = true;
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(state.projectId)}/regenerate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preserveOverrides }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 422 && Array.isArray(data.errors)) {
+        alert(`台本の形式エラー:\n\n${data.errors.join("\n")}`);
+        return;
+      }
+      throw new Error(data.error ?? "再生成に失敗しました");
+    }
+
+    const prevIndex = state.index;
+    await loadProject(state.projectId);
+    const maxIndex = (state.deck?.slides?.length ?? 1) - 1;
+    goTo(Math.min(prevIndex, maxIndex), false);
+
+    const parts = [`${data.slideCount} 枚のスライドを再生成しました。`];
+    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+      parts.push(`\n警告:\n${data.warnings.join("\n")}`);
+    }
+    if (preserveOverrides && (data.overridesRemoved ?? 0) > 0) {
+      parts.push(`\n手直し: ${data.overridesKept ?? 0} 件を保持、${data.overridesRemoved} 件を削除しました。`);
+    }
+    alert(parts.join(""));
+  } finally {
+    els.btnRegenerate.disabled = false;
+  }
+}
+
 async function goTo(index, broadcast) {
   if (state.scriptDirty && state.projectId) {
     await saveScriptSlide().catch(console.error);
@@ -580,6 +642,10 @@ els.spacingInput.addEventListener("keydown", (e) => {
 els.btnSaveEdit.addEventListener("click", () => sendEditCmd("save"));
 els.btnDeploy.addEventListener("click", deployToSurge);
 els.btnSaveScript.addEventListener("click", () => saveScriptSlide().catch((err) => alert(err.message)));
+els.btnRegenerate.addEventListener("click", openRegenerateDialog);
+els.btnRegenerateClose?.addEventListener("click", closeRegenerateDialog);
+els.btnRegenerateCancel?.addEventListener("click", closeRegenerateDialog);
+els.btnRegenerateRun?.addEventListener("click", () => runRegenerate().catch((err) => alert(err.message)));
 els.scriptText.addEventListener("input", () => {
   state.scriptDirty = true;
   els.btnSaveScript.classList.remove("is-hidden");
