@@ -1,14 +1,24 @@
 {
   "slides": {
-    "0": {
+    "7": {
       "elements": {
-        "s0-title": {
-          "translateX": 14.9,
-          "translateY": -5,
-          "html": "コンテキスト管理・フォルダ整理術",
+        "s7-char": {
+          "translateX": 0,
+          "translateY": 0,
+          "html": "",
           "group": null,
-          "editWidth": 959.7,
-          "editHeight": 59.5
+          "charSrc": "images/ウパ博士-標準-512×512-透過.png"
+        }
+      }
+    },
+    "10": {
+      "elements": {
+        "s10-char": {
+          "translateX": 0,
+          "translateY": 0,
+          "html": "",
+          "group": null,
+          "charSrc": "images/ウパ博士-標準-512×512-透過.png"
         }
       }
     }
