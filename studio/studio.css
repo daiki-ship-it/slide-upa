@@ -24,6 +24,9 @@
   --warning-bg: hsl(45, 92%, 95%);
   --warning-border: hsl(42, 72%, 68%);
   --warning-text: hsl(32, 55%, 28%);
+  --ruler-size: 20px;
+  --ruler-bg: hsl(200, 14%, 21%);
+  --ruler-border: hsl(200, 12%, 28%);
 }
 
 *,
@@ -541,7 +544,42 @@ body {
   overflow: auto;
 }
 
+.stage__ruler-layout {
+  display: grid;
+  grid-template-columns: var(--ruler-size) 1fr;
+  grid-template-rows: var(--ruler-size) auto;
+  width: 100%;
+}
+
+.stage__ruler-corner {
+  grid-column: 1;
+  grid-row: 1;
+  background: var(--ruler-bg);
+  border-right: 1px solid var(--ruler-border);
+  border-bottom: 1px solid var(--ruler-border);
+}
+
+.stage__ruler-h {
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  width: 100%;
+  height: var(--ruler-size);
+  border-bottom: 1px solid var(--ruler-border);
+}
+
+.stage__ruler-v {
+  grid-column: 1;
+  grid-row: 2;
+  display: block;
+  width: var(--ruler-size);
+  align-self: stretch;
+  border-right: 1px solid var(--ruler-border);
+}
+
 .stage__frame {
+  grid-column: 2;
+  grid-row: 2;
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;

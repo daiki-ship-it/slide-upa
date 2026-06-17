@@ -110,12 +110,17 @@
           </button>
         </div>
         <div class="stage__frame-wrap">
-          <iframe
-            id="slide-frame"
-            class="stage__frame"
-            title="スライドプレビュー"
-            sandbox="allow-scripts allow-same-origin"
-          ></iframe>
+          <div class="stage__ruler-layout">
+            <div class="stage__ruler-corner"></div>
+            <canvas id="ruler-h" class="stage__ruler-h"></canvas>
+            <canvas id="ruler-v" class="stage__ruler-v"></canvas>
+            <iframe
+              id="slide-frame"
+              class="stage__frame"
+              title="スライドプレビュー"
+              sandbox="allow-scripts allow-same-origin"
+            ></iframe>
+          </div>
         </div>
       </main>
 

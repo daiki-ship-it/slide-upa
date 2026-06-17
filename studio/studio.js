@@ -661,6 +661,140 @@ els.slideFrame.addEventListener("load", () => {
   setTimeout(() => broadcastSlide(state.index), 200);
 });
 
+// --- Rulers ---
+const SLIDE_W = 1280;
+const SLIDE_H = 720;
+
+const rulerH = document.getElementById("ruler-h");
+const rulerV = document.getElementById("ruler-v");
+
+function pickTickInterval(slideLength, renderedPx) {
+  const scale = renderedPx / slideLength;
+  for (const v of [10, 20, 25, 50, 100, 200, 250, 500]) {
+    if (v * scale >= 55) return v;
+  }
+  return 500;
+}
+
+function drawHRuler(canvas, frameW) {
+  if (!canvas || frameW <= 0) return;
+  const dpr = window.devicePixelRatio || 1;
+  const H = 20;
+  canvas.width = Math.round(frameW * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = frameW + "px";
+  canvas.style.height = H + "px";
+
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const scale = frameW / SLIDE_W;
+  const interval = pickTickInterval(SLIDE_W, frameW);
+  const half = interval / 2;
+
+  ctx.fillStyle = "hsl(200,14%,21%)";
+  ctx.fillRect(0, 0, frameW, H);
+
+  ctx.strokeStyle = "hsl(192,18%,58%)";
+  ctx.lineWidth = 0.75;
+
+  // Half-interval minor ticks
+  for (let pos = half; pos < SLIDE_W; pos += interval) {
+    const x = Math.round(pos * scale) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, H);
+    ctx.lineTo(x, H - 5);
+    ctx.stroke();
+  }
+
+  // Major ticks + labels
+  ctx.font = `9px "Inter", "Noto Sans JP", system-ui, sans-serif`;
+  ctx.fillStyle = "hsl(192,14%,68%)";
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+
+  for (let pos = 0; pos <= SLIDE_W; pos += interval) {
+    const x = Math.round(pos * scale) + 0.5;
+    ctx.strokeStyle = "hsl(192,18%,58%)";
+    ctx.beginPath();
+    ctx.moveTo(x, H);
+    ctx.lineTo(x, H - 10);
+    ctx.stroke();
+    if (pos > 0) {
+      ctx.fillText(String(pos), x + 2, 2);
+    }
+  }
+}
+
+function drawVRuler(canvas, frameH) {
+  if (!canvas || frameH <= 0) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = 20;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(frameH * dpr);
+  canvas.style.width = W + "px";
+  canvas.style.height = frameH + "px";
+
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const scale = frameH / SLIDE_H;
+  const interval = pickTickInterval(SLIDE_H, frameH);
+  const half = interval / 2;
+
+  ctx.fillStyle = "hsl(200,14%,21%)";
+  ctx.fillRect(0, 0, W, frameH);
+
+  ctx.strokeStyle = "hsl(192,18%,58%)";
+  ctx.lineWidth = 0.75;
+
+  // Half-interval minor ticks
+  for (let pos = half; pos < SLIDE_H; pos += interval) {
+    const y = Math.round(pos * scale) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W, y);
+    ctx.lineTo(W - 5, y);
+    ctx.stroke();
+  }
+
+  // Major ticks + labels (rotated)
+  ctx.font = `9px "Inter", "Noto Sans JP", system-ui, sans-serif`;
+  ctx.fillStyle = "hsl(192,14%,68%)";
+
+  for (let pos = 0; pos <= SLIDE_H; pos += interval) {
+    const y = Math.round(pos * scale) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W, y);
+    ctx.lineTo(W - 10, y);
+    ctx.stroke();
+    if (pos > 0) {
+      ctx.save();
+      ctx.translate(W - 12, y - 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      ctx.fillText(String(pos), 0, 0);
+      ctx.restore();
+    }
+  }
+}
+
+function updateRulers() {
+  const frame = els.slideFrame;
+  if (!frame) return;
+  const w = frame.offsetWidth;
+  const h = frame.offsetHeight;
+  if (w <= 0 || h <= 0) return;
+  drawHRuler(rulerH, w);
+  drawVRuler(rulerV, h);
+}
+
+if (els.slideFrame && (rulerH || rulerV)) {
+  const rulerObserver = new ResizeObserver(updateRulers);
+  rulerObserver.observe(els.slideFrame);
+}
+// --- end Rulers ---
+
 async function init() {
   state.projects = await fetchProjects();
   if (state.projects.length === 0) {
