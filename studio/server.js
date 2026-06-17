@@ -102,7 +102,7 @@ function writeOverrides(id, data) {
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 
-const SLIDE_TYPE_LABELS = { title: "表紙", bullets: "要点", quote: "一言", visual: "画像" };
+const SLIDE_TYPE_LABELS = { title: "表紙", chapter: "章", bullets: "要点", quote: "一言", visual: "画像" };
 
 function escXml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -133,6 +133,27 @@ function buildNewSlideHtml(idx, type, heading, iconSrc, imagesDir) {
   if (type === "title") {
     const watermark = resolveCharVariant(iconSrc, "真顔", imagesDir);
     return `<section class="slide slide--title" data-type="title" aria-hidden="true">
+${top}
+        <img
+          class="slide__watermark"
+          data-edit-id="${s}-watermark"
+          data-edit-char
+          src="${watermark}"
+          alt=""
+          width="560"
+          height="560"
+          aria-hidden="true"
+        >
+        <div class="slide__body">
+          <h1 class="slide__main-title" data-edit-id="${s}-title" data-edit-text>${h}</h1>
+        </div>
+${bot}
+${footer}
+      </section>`;
+  }
+  if (type === "chapter") {
+    const watermark = resolveCharVariant(iconSrc, "真顔", imagesDir);
+    return `<section class="slide slide--chapter" data-type="chapter" aria-hidden="true">
 ${top}
         <img
           class="slide__watermark"
@@ -352,8 +373,14 @@ function readBody(req) {
   });
 }
 
-function findSectionBounds(lines, heading) {
-  const headingLine = `### ${heading}`;
+function headingPrefixForType(type) {
+  if (type === "chapter") return "##";
+  if (type === "title") return "#";
+  return "###";
+}
+
+function findSectionBounds(lines, heading, type = "bullets") {
+  const headingLine = `${headingPrefixForType(type)} ${heading}`;
   let headingIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].trimEnd() === headingLine) { headingIdx = i; break; }
@@ -395,15 +422,15 @@ function updateScriptMdSection(scriptContent, heading, newScript) {
   return [...lines.slice(0, headingIdx + 1), ...newParts, ...lines.slice(nextHeadingIdx)].join("\n");
 }
 
-function insertSlideIntoScriptMd(scriptContent, afterHeading, newHeading) {
+function insertSlideIntoScriptMd(scriptContent, afterHeading, newHeading, afterType = "bullets", newType = "bullets") {
   const lines = scriptContent.split("\n");
-  const bounds = findSectionBounds(lines, afterHeading);
-
-  const newSection = [`### ${newHeading}`, ""];
+  const bounds = findSectionBounds(lines, afterHeading, afterType);
+  const newPrefix = headingPrefixForType(newType);
+  const newSection = [`${newPrefix} ${newHeading}`, ""];
 
   if (!bounds) {
     // 前のスライドのセクションが見つからない → 末尾に追記
-    return scriptContent.trimEnd() + `\n\n### ${newHeading}\n`;
+    return scriptContent.trimEnd() + `\n\n${newPrefix} ${newHeading}\n`;
   }
 
   const { nextHeadingIdx } = bounds;
@@ -416,9 +443,9 @@ function insertSlideIntoScriptMd(scriptContent, afterHeading, newHeading) {
   ].join("\n");
 }
 
-function removeSlideFromScriptMd(scriptContent, heading) {
+function removeSlideFromScriptMd(scriptContent, heading, type = "bullets") {
   const lines = scriptContent.split("\n");
-  const bounds = findSectionBounds(lines, heading);
+  const bounds = findSectionBounds(lines, heading, type);
   if (!bounds) return scriptContent;
 
   const { headingIdx, nextHeadingIdx } = bounds;
@@ -438,6 +465,20 @@ function renameScriptMdHeading(scriptContent, oldHeading, newHeading) {
   const lines = scriptContent.split("\n");
   const oldLine = `### ${oldHeading}`;
   const newLine = `### ${newHeading}`;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd() === oldLine) {
+      lines[i] = newLine;
+      return lines.join("\n");
+    }
+  }
+  return scriptContent;
+}
+
+function renameScriptMdChapterHeading(scriptContent, oldHeading, newHeading) {
+  if (!oldHeading || !newHeading || oldHeading === newHeading) return scriptContent;
+  const lines = scriptContent.split("\n");
+  const oldLine = `## ${oldHeading}`;
+  const newLine = `## ${newHeading}`;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].trimEnd() === oldLine) {
       lines[i] = newLine;
@@ -580,6 +621,11 @@ function applyScriptSync(dir, overrides, scriptSync) {
       if (newHeading && newHeading !== oldHeading) {
         if (scriptContent) scriptContent = renameScriptMdTitle(scriptContent, newHeading);
         deck.title = newHeading;
+        slide.heading = newHeading;
+      }
+    } else if (type === "chapter") {
+      if (newHeading && newHeading !== oldHeading) {
+        if (scriptContent) scriptContent = renameScriptMdChapterHeading(scriptContent, oldHeading, newHeading);
         slide.heading = newHeading;
       }
     } else if (newHeading && newHeading !== oldHeading) {
@@ -728,8 +774,14 @@ const server = http.createServer((req, res) => {
 
         const scriptPath = path.join(dir, "script.md");
         if (fs.existsSync(scriptPath)) {
-          const afterHeading = deck.slides[afterIndex].heading;
-          const updated = insertSlideIntoScriptMd(fs.readFileSync(scriptPath, "utf8"), afterHeading, heading);
+          const afterSlide = deck.slides[afterIndex];
+          const updated = insertSlideIntoScriptMd(
+            fs.readFileSync(scriptPath, "utf8"),
+            afterSlide.heading,
+            heading,
+            afterSlide.type,
+            type
+          );
           fs.writeFileSync(scriptPath, updated, "utf8");
         }
 
@@ -768,8 +820,12 @@ const server = http.createServer((req, res) => {
 
     const scriptPathDel = path.join(dir, "script.md");
     if (fs.existsSync(scriptPathDel)) {
-      const deletedHeading = deck.slides[index].heading;
-      const updated = removeSlideFromScriptMd(fs.readFileSync(scriptPathDel, "utf8"), deletedHeading);
+      const deletedSlide = deck.slides[index];
+      const updated = removeSlideFromScriptMd(
+        fs.readFileSync(scriptPathDel, "utf8"),
+        deletedSlide.heading,
+        deletedSlide.type
+      );
       fs.writeFileSync(scriptPathDel, updated, "utf8");
     }
 

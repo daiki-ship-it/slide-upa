@@ -925,7 +925,7 @@
     const heading = getSlideTitleText(slide);
     const textPatches = collectTextPatches(slide);
 
-    if (type === "title") {
+    if (type === "title" || type === "chapter") {
       return { index, heading, script: "", textPatches };
     }
     if (type === "visual") {

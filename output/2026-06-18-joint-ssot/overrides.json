@@ -13,7 +13,15 @@
       }
     },
     "1": {
-      "elements": {}
+      "elements": {
+        "s1-title": {
+          "translateX": 0,
+          "translateY": 6,
+          "group": null,
+          "editWidth": 1270.8,
+          "editHeight": 65.3
+        }
+      }
     },
     "2": {
       "elements": {}
@@ -25,15 +33,14 @@
       "elements": {}
     },
     "5": {
-      "elements": {},
-      "visualSlotCount": 1
-    },
-    "6": {
       "elements": {}
     },
-    "7": {
+    "6": {
       "elements": {},
       "visualSlotCount": 1
+    },
+    "7": {
+      "elements": {}
     },
     "8": {
       "elements": {},
@@ -43,7 +50,8 @@
       "elements": {}
     },
     "10": {
-      "elements": {}
+      "elements": {},
+      "visualSlotCount": 1
     },
     "11": {
       "elements": {}
@@ -52,6 +60,15 @@
       "elements": {}
     },
     "13": {
+      "elements": {}
+    },
+    "14": {
+      "elements": {}
+    },
+    "15": {
+      "elements": {}
+    },
+    "16": {
       "elements": {}
     }
   }

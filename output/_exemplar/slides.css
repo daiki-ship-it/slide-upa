@@ -108,12 +108,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ① 表紙 */
-.slide--title {
+/* ① 表紙 ⑤ 章 */
+.slide--title,
+.slide--chapter {
   background: var(--slide-title-bg);
 }
 
-.slide--title .slide__watermark {
+.slide--title .slide__watermark,
+.slide--chapter .slide__watermark {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -127,7 +129,8 @@ body {
   user-select: none;
 }
 
-.slide--title .slide__body {
+.slide--title .slide__body,
+.slide--chapter .slide__body {
   position: relative;
   z-index: 1;
   align-items: center;
@@ -136,12 +139,14 @@ body {
   gap: 1.25rem;
 }
 
-.slide--title .slide__bar {
+.slide--title .slide__bar,
+.slide--chapter .slide__bar {
   position: relative;
   z-index: 1;
 }
 
-.slide--title .slide__main-title {
+.slide--title .slide__main-title,
+.slide--chapter .slide__main-title {
   margin: 0;
   font-size: clamp(1.75rem, 3.2cqw, 2.5rem);
   font-weight: 700;
@@ -153,7 +158,8 @@ body {
     0 2px 4px rgba(255, 255, 255, 0.75);
 }
 
-.slide--title .slide__subtitle {
+.slide--title .slide__subtitle,
+.slide--chapter .slide__subtitle {
   margin: 0;
   font-size: clamp(1rem, 1.6cqw, 1.25rem);
   font-weight: 500;
