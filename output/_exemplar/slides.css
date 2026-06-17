@@ -195,18 +195,8 @@ body {
 }
 
 .slide--bullets .slide__list-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
   font-size: clamp(1.3rem, 2.2cqw, 1.65rem);
   line-height: 1.5;
-}
-
-.slide--bullets .slide__list-icon {
-  flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
-  color: var(--brand-primary);
 }
 
 /* ③ 大きな一言（左キャラ + 吹き出し） */
