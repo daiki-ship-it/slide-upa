@@ -331,10 +331,14 @@
   function getElementState(el) {
     const { x, y } = readTranslate(el);
     const { width, height } = readSize(el);
+    let html = el.innerHTML;
+    if (el.classList.contains("slide__hero-title") && el.closest(".slide--chapter")) {
+      html = html.replace(/<br\s*\/?>/gi, "");
+    }
     const state = {
       translateX: x,
       translateY: y,
-      html: el.innerHTML,
+      html,
       group: el.dataset.editGroup ?? null,
     };
     if (width != null) state.editWidth = width;
@@ -892,7 +896,11 @@
         const key = `${host.dataset.editId}:self`;
         if (seen.has(key)) return;
         seen.add(key);
-        patches.push({ editId: host.dataset.editId, mode: "self", html: host.innerHTML });
+        let html = host.innerHTML;
+        if (host.classList.contains("slide__hero-title") && host.closest(".slide--chapter")) {
+          html = html.replace(/<br\s*\/?>/gi, "");
+        }
+        patches.push({ editId: host.dataset.editId, mode: "self", html });
         return;
       }
 

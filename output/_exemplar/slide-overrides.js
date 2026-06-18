@@ -18,7 +18,13 @@
 
   function applyElementState(el, data) {
     if (!data) return;
-    if (data.html != null) el.innerHTML = data.html;
+    if (data.html != null) {
+      let html = data.html;
+      if (el.classList.contains("slide__hero-title") && el.closest(".slide--chapter")) {
+        html = html.replace(/<br\s*\/?>/gi, "");
+      }
+      el.innerHTML = html;
+    }
     if (data.translateX != null || data.translateY != null) {
       applyTranslate(el, data.translateX ?? 0, data.translateY ?? 0);
     }

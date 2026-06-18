@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { deployProject, readDeployRecord } from "./deploy.js";
 import { linkAllContextScripts, writeCanonicalScript } from "../lib/context-script.js";
-import { regenerateProject } from "../lib/generate-from-script.js";
+import { regenerateProject, sanitizeChapterTitleHtml, sanitizeChapterTitlesInAudienceHtml } from "../lib/generate-from-script.js";
 import { loadSlideUpaEnv } from "../lib/load-env.js";
 
 loadSlideUpaEnv();
@@ -673,11 +673,15 @@ function patchAudienceQuoteBubble(html, editId, leadHtml, keyHtml) {
   return result.slice(0, startIdx) + nextBubble + result.slice(bubbleEnd);
 }
 
-function applyAudienceTextPatches(html, patches) {
+function applyAudienceTextPatches(html, patches, options = {}) {
+  const { chapterTitleEditIds = null } = options;
   let result = html;
   for (const patch of patches) {
+    const isChapterTitle =
+      chapterTitleEditIds instanceof Set && chapterTitleEditIds.has(patch.editId);
     if (patch.mode === "self") {
-      result = patchAudienceElementById(result, patch.editId, patch.html);
+      const innerHtml = isChapterTitle ? sanitizeChapterTitleHtml(patch.html ?? "") : patch.html;
+      result = patchAudienceElementById(result, patch.editId, innerHtml);
     } else if (patch.mode === "span") {
       result = patchAudienceSpanInEditId(result, patch.editId, patch.html);
     } else if (patch.mode === "quote") {
@@ -757,7 +761,8 @@ function applyScriptSync(dir, overrides, scriptSync) {
     }
 
     if (audienceHtml && textPatches.length > 0) {
-      const patched = applyAudienceTextPatches(audienceHtml, textPatches);
+      const chapterTitles = type === "chapter" ? new Set([`s${index}-title`]) : null;
+      const patched = applyAudienceTextPatches(audienceHtml, textPatches, { chapterTitleEditIds: chapterTitles });
       if (patched !== audienceHtml) {
         audienceHtml = patched;
         stripSyncedTextOverrides(overrides, index, editIds);
@@ -772,7 +777,7 @@ function applyScriptSync(dir, overrides, scriptSync) {
   }
   fs.writeFileSync(deckPath, JSON.stringify(deck, null, 2), "utf8");
   if (audienceHtml && fs.existsSync(audiencePath)) {
-    fs.writeFileSync(audiencePath, audienceHtml, "utf8");
+    fs.writeFileSync(audiencePath, sanitizeChapterTitlesInAudienceHtml(audienceHtml, deck), "utf8");
   }
 
   return { synced, deck };
