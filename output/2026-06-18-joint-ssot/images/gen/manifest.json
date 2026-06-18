@@ -1,0 +1,42 @@
+{
+  "s6-visual0": {
+    "descriptionHash": "e2b9a955de051328",
+    "description": "中央に「コンテキスト」。周囲から矢印で「事業の内容」「顧客のこと」「いまの目標」「過去の決定・メモ」が集まる。右端にAIへの入力矢印",
+    "file": "gen/s6-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T03:59:24.103Z"
+  },
+  "s9-visual0": {
+    "descriptionHash": "214f3439747c99d2",
+    "description": "左に散らばったファイル・メモ・チャット履歴、中央に「？」、右に「正本」1か所。矢印で「散らばり → 正本を決める → 渡す材料がはっきりする」",
+    "file": "gen/s9-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T03:59:31.166Z"
+  },
+  "s7-visual0": {
+    "descriptionHash": "04480504de8f7d2f",
+    "description": "文字ラベルなし。中央に丸いハブ、四方向からカバン・人物・旗・メモのアイコンが矢印で集まる。右端にAIアイコンへ1本の矢印。白背景、ティールのアクセント、シンプルなフラット図解",
+    "file": "gen/s7-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T04:03:07.770Z"
+  },
+  "s11-visual0": {
+    "descriptionHash": "3597ca7af3eb34e5",
+    "description": "文字ラベルなし。左にばらばらの書類アイコン3つ、中央に?マーク、右に1つのフォルダアイコン（星付き）。左から右へ矢印2本。白背景、ティール、フラット図解",
+    "file": "gen/s11-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T04:03:13.574Z"
+  },
+  "s15-visual0": {
+    "descriptionHash": "17eef29c1012e447",
+    "description": "文字ラベルなし。親フォルダから子フォルダへ枝分かれするシンプルなツリー図。白背景、ティール、フラット図解",
+    "file": "gen/s15-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T04:03:20.855Z"
+  }
+}

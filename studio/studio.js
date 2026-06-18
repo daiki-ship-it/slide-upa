@@ -375,6 +375,14 @@ async function runRegenerate() {
     goTo(Math.min(prevIndex, maxIndex), false);
 
     const parts = [`${data.slideCount} 枚のスライドを再生成しました。`];
+    if (Array.isArray(data.imageResults) && data.imageResults.length > 0) {
+      const generated = data.imageResults.filter((r) => r.status === "generated").length;
+      const cached = data.imageResults.filter((r) => r.status === "cached").length;
+      const failed = data.imageResults.filter((r) => r.status === "failed").length;
+      if (generated > 0) parts.push(`\n画像: ${generated} 枚を新規生成`);
+      if (cached > 0) parts.push(`\n画像: ${cached} 枚はキャッシュを使用`);
+      if (failed > 0) parts.push(`\n画像: ${failed} 枚は生成失敗`);
+    }
     if (Array.isArray(data.warnings) && data.warnings.length > 0) {
       parts.push(`\n警告:\n${data.warnings.join("\n")}`);
     }

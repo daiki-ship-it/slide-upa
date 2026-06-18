@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import { deployProject, readDeployRecord } from "./deploy.js";
 import { linkAllContextScripts, writeCanonicalScript } from "../lib/context-script.js";
 import { regenerateProject } from "../lib/generate-from-script.js";
+import { loadSlideUpaEnv } from "../lib/load-env.js";
+
+loadSlideUpaEnv();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -954,15 +957,21 @@ const server = http.createServer((req, res) => {
   if (regenerateMatch && req.method === "POST") {
     const id = decodeURIComponent(regenerateMatch[1]);
     readBody(req)
-      .then((body) => {
+      .then(async (body) => {
         const dir = projectDir(id);
         if (!dir) {
           sendJson(res, 404, { error: "Project not found" });
           return;
         }
         const preserveOverrides = body?.preserveOverrides !== false;
+        const generateImages = body?.generateImages !== false;
+        const forceRegenerateImages = body?.forceRegenerateImages === true;
         try {
-          const result = regenerateProject(dir, { preserveOverrides });
+          const result = await regenerateProject(dir, {
+            preserveOverrides,
+            generateImages,
+            forceRegenerateImages,
+          });
           sendJson(res, 200, result);
         } catch (err) {
           if (err.code === "VALIDATION") {

@@ -1,26 +1,3 @@
 {
-  "slides": {
-    "7": {
-      "elements": {
-        "s7-char": {
-          "translateX": 0,
-          "translateY": 0,
-          "html": "",
-          "group": null,
-          "charSrc": "images/ウパ博士-標準-512×512-透過.png"
-        }
-      }
-    },
-    "10": {
-      "elements": {
-        "s10-char": {
-          "translateX": 0,
-          "translateY": 0,
-          "html": "",
-          "group": null,
-          "charSrc": "images/ウパ博士-標準-512×512-透過.png"
-        }
-      }
-    }
-  }
+  "slides": {}
 }

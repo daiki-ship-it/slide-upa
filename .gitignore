@@ -1,3 +1,7 @@
 # 自動生成・バックアップ不要
 deploy-history.log
 output/*/deploy.json
+node_modules/
+
+# API キー（コミットしない）
+.env

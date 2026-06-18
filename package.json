@@ -4,6 +4,11 @@
   "type": "module",
   "scripts": {
     "start": "npm start --prefix studio",
-    "studio": "npm start --prefix studio"
+    "studio": "npm start --prefix studio",
+    "generate": "node bin/generate-project.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.8.0",
+    "dotenv": "^17.4.2"
   }
 }
