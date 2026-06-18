@@ -236,6 +236,10 @@ body {
   font-size: clamp(1.45rem, 2.5cqw, 1.9rem);
 }
 
+.slide--chapter .slide__hero-title {
+  white-space: nowrap;
+}
+
 .slide--goal .slide__goals {
   margin: 0;
   padding: 2rem 0 0;
