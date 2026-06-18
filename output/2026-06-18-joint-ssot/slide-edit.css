@@ -4,6 +4,20 @@
   position: relative;
 }
 
+/* ④ 画像スライド：編集時は空の本文枠も表示 */
+.slide__body.is-edit-layer .slide__visual-text:empty {
+  display: block;
+  min-height: 1.6em;
+  padding: 0.35rem 0.5rem;
+  border: 1px dashed hsl(188, 45%, 72%);
+  border-radius: 0.25rem;
+  color: hsl(200, 12%, 50%);
+}
+
+.slide__body.is-edit-layer .slide__visual-text:empty::before {
+  content: "ここに説明文を書く";
+}
+
 [data-edit-id] {
   cursor: pointer;
   transition: box-shadow 0.12s ease;

@@ -43,14 +43,21 @@
       "type": "quote",
       "typeLabel": "一言",
       "heading": "1-2. 一番覚えておくこと",
-      "script": "[quote: ポイントは「人が毎回書かなくていい」ことです]"
+      "script": ""
     },
     {
       "index": 6,
+      "type": "chapter",
+      "typeLabel": "章",
+      "heading": "第2章：仕組み",
+      "script": "- **第1章** — 型の説明\n- **第2章** — 仕組み\n- **第3章** — **studio** での編集"
+    },
+    {
+      "index": 7,
       "type": "visual",
       "typeLabel": "画像",
       "heading": "2-1. 全体の流れ",
-      "script": ""
+      "script": "タスクを読む → 整理する → Slack に投稿する、3ステップの流れです。"
     }
   ]
 }

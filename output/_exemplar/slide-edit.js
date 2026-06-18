@@ -958,7 +958,13 @@
       return { index, heading, script: items.join("\n"), textPatches };
     }
     if (type === "visual") {
-      return { index, heading, skipBody: true, textPatches };
+      const bodyEl = slide.querySelector(".slide__visual-text");
+      const bodyEdited = bodyEl?.dataset.edited === "1";
+      if (!bodyEdited) {
+        return { index, heading, skipBody: true, textPatches };
+      }
+      const scriptBody = bodyEl ? htmlToMarkdownInline(bodyEl.innerHTML).trim() : "";
+      return { index, heading, script: scriptBody, textPatches };
     }
     if (type === "quote") {
       const bubble = slide.querySelector(".slide__bubble");

@@ -289,17 +289,21 @@ ${footer}
       </section>`;
   }
   // visual (default)
+  const visualBody = initialVisualBodyHtml("visual");
   return `<section class="slide slide--visual" data-type="visual" aria-hidden="true">
 ${top}
         <div class="slide__body">
           <h2 class="slide__section-title" data-edit-id="${s}-title" data-edit-text>${h}</h2>
-          <div class="slide__visual-area">
-            <div
-              class="slide__visual-slot"
-              data-edit-id="${s}-visual0"
-              data-edit-visual=""
-              aria-label="クリックして画像をアップロード"
-            >
+          <div class="slide__visual-stack">
+            <p class="slide__visual-text" data-edit-id="${s}-body" data-edit-text>${visualBody}</p>
+            <div class="slide__visual-area">
+              <div
+                class="slide__visual-slot"
+                data-edit-id="${s}-visual0"
+                data-edit-visual=""
+                aria-label="クリックして画像をアップロード"
+              >
+              </div>
             </div>
           </div>
         </div>
@@ -343,7 +347,7 @@ function addSlideToDeck(deck, afterIndex, type, heading) {
   const typeLabel = SLIDE_TYPE_LABELS[type] ?? type;
   const newSlides = [
     ...deck.slides.slice(0, afterIndex + 1),
-    { index: afterIndex + 1, type, typeLabel, heading, script: "" },
+    { index: afterIndex + 1, type, typeLabel, heading, script: initialDeckScript(type, heading) },
     ...deck.slides.slice(afterIndex + 1),
   ];
   newSlides.forEach((s, i) => { s.index = i; });
@@ -448,6 +452,50 @@ function headingPrefixForType(type) {
   return "###";
 }
 
+/** @param {string} type */
+function initialScriptSectionLines(type, heading) {
+  const head = `${headingPrefixForType(type)} ${heading}`;
+  switch (type) {
+    case "visual":
+      return [head, "", "ここに説明文を書く", "", "[visual]", "[image: 図解の説明]"];
+    case "quote":
+      return [head, "", "[quote: ここに一言を書く]"];
+    case "goal":
+      return [head, "", "- **①** ゴール 1", "- **②** ゴール 2"];
+    case "agenda":
+      return [head, "", "- **第1章** — 説明"];
+    case "chapter":
+      return [head];
+    case "bullets":
+    default:
+      return [head, "", "- ポイント 1", "- ポイント 2"];
+  }
+}
+
+/** @param {string} type @param {string} heading */
+function initialDeckScript(type, heading) {
+  void heading;
+  switch (type) {
+    case "visual":
+      return "ここに説明文を書く";
+    case "quote":
+      return "[quote: ここに一言を書く]";
+    case "goal":
+      return "- **①** ゴール 1\n- **②** ゴール 2";
+    case "agenda":
+      return "- **第1章** — 説明";
+    case "bullets":
+      return "- ポイント 1\n- ポイント 2";
+    default:
+      return "";
+  }
+}
+
+/** @param {string} type */
+function initialVisualBodyHtml(type) {
+  return type === "visual" ? "ここに説明文を書く" : "";
+}
+
 function findSectionBounds(lines, heading, type = "bullets") {
   const headingLine = `${headingPrefixForType(type)} ${heading}`;
   let headingIdx = -1;
@@ -494,12 +542,11 @@ function updateScriptMdSection(scriptContent, heading, newScript) {
 function insertSlideIntoScriptMd(scriptContent, afterHeading, newHeading, afterType = "bullets", newType = "bullets") {
   const lines = scriptContent.split("\n");
   const bounds = findSectionBounds(lines, afterHeading, afterType);
-  const newPrefix = headingPrefixForType(newType);
-  const newSection = [`${newPrefix} ${newHeading}`, ""];
+  const newSection = initialScriptSectionLines(newType, newHeading);
 
   if (!bounds) {
     // 前のスライドのセクションが見つからない → 末尾に追記
-    return scriptContent.trimEnd() + `\n\n${newPrefix} ${newHeading}\n`;
+    return `${scriptContent.trimEnd()}\n\n${newSection.join("\n")}\n`;
   }
 
   const { nextHeadingIdx } = bounds;

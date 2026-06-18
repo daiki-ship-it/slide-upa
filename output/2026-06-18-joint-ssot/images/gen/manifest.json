@@ -38,5 +38,21 @@
     "model": "gemini-2.5-flash-image",
     "mimeType": "image/png",
     "createdAt": "2026-06-18T04:03:20.855Z"
+  },
+  "s12-visual0": {
+    "descriptionHash": "3597ca7af3eb34e5",
+    "description": "文字ラベルなし。左にばらばらの書類アイコン3つ、中央に?マーク、右に1つのフォルダアイコン（星付き）。左から右へ矢印2本。白背景、ティール、フラット図解",
+    "file": "gen/s12-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T08:39:18.451Z"
+  },
+  "s16-visual0": {
+    "descriptionHash": "17eef29c1012e447",
+    "description": "文字ラベルなし。親フォルダから子フォルダへ枝分かれするシンプルなツリー図。白背景、ティール、フラット図解",
+    "file": "gen/s16-visual0.png",
+    "model": "gemini-2.5-flash-image",
+    "mimeType": "image/png",
+    "createdAt": "2026-06-18T08:39:24.497Z"
   }
 }
